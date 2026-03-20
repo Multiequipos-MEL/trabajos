@@ -3,1569 +3,959 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Trabajos - Multiequipos</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <title>Multiequipos — Gestión de Mantenimiento</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <meta name="theme-color" content="#2563eb">
+    <meta name="theme-color" content="#f0f2f5">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="./logo.png">
-
     <style>
-        :root {
-            --primary: #2563eb;
-            --primary-dark: #1e40af;
-            --secondary: #64748b;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --bg-light: #f1f5f9;
-            --white: #ffffff;
-            --dark: #0f172a;
-            --border: #e2e8f0;
-            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            --job-color: #334155;
-            --font-main: 'Outfit', sans-serif;
-            --font-mono: 'DM Mono', monospace;
-        }
+    :root {
+        /* Primary: Red */
+        --blue:       #C0392B;
+        --blue-light: #E8341D;
+        --blue-dim:   rgba(192,57,43,0.10);
+        --blue-glow:  rgba(192,57,43,0.22);
+        /* Danger/alerts still red */
+        --red:        #C0392B;
+        --red-dim:    rgba(192,57,43,0.10);
+        --red-glow:   rgba(192,57,43,0.22);
+        /* Success: kept green */
+        --green:      #1a9e6a;
+        --green-dim:  rgba(26,158,106,0.12);
+        /* Amber replaced with grey-blue neutral */
+        --amber:      #5a6a7e;
+        --amber-dim:  rgba(90,106,126,0.12);
+        /* Light mode backgrounds */
+        --bg-base:    #f0f2f5;
+        --bg-panel:   #ffffff;
+        --bg-card:    #f7f8fa;
+        --bg-hover:   #eef0f4;
+        --bg-input:   #ffffff;
+        --border:     rgba(0,0,0,0.08);
+        --border-med: rgba(0,0,0,0.14);
+        /* Light mode text */
+        --text-1:     #1a2030;
+        --text-2:     #5a6a7e;
+        --text-3:     #9aa3b0;
+        --sidebar-w:  68px;
+        --font-d: 'Outfit', sans-serif;
+        --font-b: 'Outfit', sans-serif;
+        --font-m: 'IBM Plex Mono', monospace;
+        --r-sm: 6px; --r-md: 10px; --r-lg: 16px;
+        --sh-sm: 0 2px 8px rgba(0,0,0,.08);
+        --sh-md: 0 8px 24px rgba(0,0,0,.10);
+        --sh-lg: 0 20px 60px rgba(0,0,0,.15);
+        --t: .18s cubic-bezier(.4,0,.2,1);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:var(--font-b);background:var(--bg-base);color:var(--text-1);height:100vh;overflow:hidden;font-size:14px;-webkit-font-smoothing:antialiased;font-weight:400}
+    .hidden{display:none!important}
+    ::-webkit-scrollbar{width:4px;height:4px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:var(--border-med);border-radius:2px}
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: var(--font-main);
-            -webkit-tap-highlight-color: transparent;
-        }
+    /* ── LOGIN ── */
+    #login-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f0f2f5 0%,#e8ebf0 100%);z-index:9999;overflow:hidden}
+    #login-screen::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 15% 15%,rgba(192,57,43,.12) 0%,transparent 65%),radial-gradient(ellipse 50% 50% at 85% 80%,rgba(90,106,126,.08) 0%,transparent 60%);animation:lgPulse 10s ease-in-out infinite alternate}
+    #login-screen::after{content:'';position:absolute;inset:0;background-image:repeating-linear-gradient(-45deg,transparent,transparent 40px,rgba(255,255,255,.012) 40px,rgba(255,255,255,.012) 41px);pointer-events:none}
+    @keyframes lgPulse{0%{opacity:.6}100%{opacity:1}}
+    .login-card{position:relative;z-index:2;width:min(460px,92vw);background:var(--bg-panel);border:1px solid var(--border-med);border-radius:var(--r-lg);overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.14),0 0 0 1px rgba(0,0,0,.06);animation:lgUp .6s cubic-bezier(.16,1,.3,1) both}
+    @keyframes lgUp{from{opacity:0;transform:translateY(28px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+    .login-bar{height:4px;background:linear-gradient(90deg,var(--red),#5a6a7e)}
+    .login-body{padding:2.5rem 2.5rem 2rem}
+    .login-logo-row{display:flex;align-items:center;gap:.875rem;margin-bottom:2rem}
+    .login-icon{width:44px;height:44px;background:var(--red-dim);border:1px solid var(--red-glow);border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:var(--red)}
+    .login-brand .name{font-family:var(--font-d);font-size:1.2rem;font-weight:700;color:var(--text-1);letter-spacing:-.3px}
+    .login-brand .tag{font-family:var(--font-m);font-size:.65rem;color:var(--text-3);text-transform:uppercase;letter-spacing:1.5px;margin-top:1px}
+    .login-h{font-family:var(--font-d);font-size:1.6rem;font-weight:700;color:var(--text-1);margin-bottom:.3rem;letter-spacing:-.3px}
+    .login-sub{font-size:.82rem;color:var(--text-2);margin-bottom:1.75rem;font-weight:400}
+    .lf-g{margin-bottom:1.1rem}
+    .lf-label{display:block;font-size:.7rem;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:1px;margin-bottom:.45rem}
+    .lf-wrap{position:relative}
+    .lf-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-3);font-size:.8rem;pointer-events:none;transition:color var(--t)}
+    .lf-input{width:100%;padding:.8rem .8rem .8rem 2.4rem;background:#f7f8fa;border:1px solid var(--border-med);border-radius:var(--r-sm);color:var(--text-1);font-family:var(--font-b);font-size:.9rem;transition:all var(--t);-webkit-appearance:none}
+    .lf-input::placeholder{color:var(--text-3)}    .lf-label{color:var(--text-2)!important}
+    .lf-input:focus{outline:none;border-color:rgba(192,57,43,.5);background:rgba(192,57,43,.04);box-shadow:0 0 0 3px rgba(192,57,43,.1)}
+    .btn-login{width:100%;padding:.85rem;background:var(--red);border:none;border-radius:var(--r-sm);color:#fff;font-family:var(--font-d);font-size:.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.5rem;margin-top:1.5rem;transition:all var(--t);box-shadow:0 4px 16px rgba(192,57,43,.35);letter-spacing:.3px}
+    .btn-login:hover{background:var(--blue-light);transform:translateY(-1px);box-shadow:0 6px 24px rgba(192,57,43,.5)}
+    #login-error{margin-top:1rem;padding:.65rem .875rem;background:var(--red-dim);border:1px solid var(--red-glow);border-radius:var(--r-sm);color:#ff8a78;font-size:.82rem;display:flex;align-items:center;gap:.5rem}
 
-        body {
-            background-color: var(--bg-light);
-            color: var(--dark);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+    /* ── APP SHELL ── */
+    #app-container{display:flex;height:100vh;overflow:hidden}
 
-        .hidden { display: none !important; }
+    /* ── SIDEBAR ── */
+    #sidebar{width:var(--sidebar-w);background:#2c3442;border-right:none;display:flex;flex-direction:column;align-items:center;padding:1rem 0;gap:.25rem;flex-shrink:0;z-index:10}
+    .sb-logo{width:40px;height:40px;background:rgba(192,57,43,.25);border:1px solid rgba(192,57,43,.4);border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;font-size:1rem;color:#ff8570;margin-bottom:1.25rem;flex-shrink:0}
+    .sb-nav{display:flex;flex-direction:column;gap:.25rem;width:100%;padding:0 .5rem}
+    .nav-btn{width:100%;height:44px;background:none;border:1px solid transparent;border-radius:var(--r-sm);color:rgba(255,255,255,.4);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--t);position:relative}
+    .nav-btn:hover{background:rgba(255,255,255,.08);color:rgba(255,255,255,.75);border-color:rgba(255,255,255,.1)}
+    .nav-btn.active{background:rgba(192,57,43,.3);border-color:rgba(192,57,43,.5);color:#ff8570}
+    .nav-tip{position:absolute;left:calc(100% + 10px);background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-sm);padding:.3rem .65rem;font-size:.75rem;font-family:var(--font-b);color:var(--text-1);white-space:nowrap;opacity:0;pointer-events:none;transition:opacity var(--t);z-index:100;box-shadow:var(--sh-sm)}
+    .nav-btn:hover .nav-tip{opacity:1}
+    .sb-spacer{flex:1}
+    .sb-bottom{width:100%;padding:0 .5rem;display:flex;flex-direction:column;gap:.25rem}
+    .sb-divider{width:32px;height:1px;background:rgba(255,255,255,.12);margin:.5rem auto}
 
-        .btn {
-            padding: 0.5rem 1rem;
-            border-radius: 0.375rem;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.9rem;
-            font-family: var(--font-main);
-        }
-        .btn-primary { background-color: var(--primary); color: white; }
-        .btn-primary:hover { background-color: var(--primary-dark); }
-        .btn-job { background-color: var(--job-color); color: white; }
-        .btn-secondary { background-color: var(--white); border: 1px solid var(--border); color: var(--dark); }
-        .btn-secondary:hover { background-color: var(--bg-light); }
-        .btn-danger { background-color: var(--danger); color: white; }
-        .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
-        .text-danger { color: var(--danger); }
-        .text-success { color: var(--success); }
-        .text-warning { color: var(--warning); }
-        .text-primary { color: var(--primary); }
-        .text-secondary { color: var(--secondary); }
-        .text-sm { font-size: 0.875rem; }
-        .clickable { cursor: pointer; transition: transform 0.2s; }
-        .clickable:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    /* ── MAIN ── */
+    #main-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
 
-        /* ============================================
-           LOGIN SCREEN — Rediseño Sofisticado
-        ============================================ */
-        #login-screen {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            overflow: hidden;
-            background: #080e1a;
-        }
+    /* ── TOPBAR ── */
+    #topbar{height:56px;background:var(--bg-panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1.25rem;gap:1rem;flex-shrink:0;box-shadow:0 1px 0 rgba(0,0,0,.06)}
+    .topbar-title{font-family:var(--font-d);font-size:1rem;font-weight:800;color:var(--text-1);letter-spacing:-.2px;flex:1}
+    .topbar-title span{color:var(--red)}
 
-        /* Fondo animado con gradiente y malla */
-        #login-screen::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background:
-                radial-gradient(ellipse 80% 60% at 20% 10%, rgba(37, 99, 235, 0.25) 0%, transparent 60%),
-                radial-gradient(ellipse 60% 50% at 80% 90%, rgba(16, 185, 129, 0.15) 0%, transparent 55%),
-                radial-gradient(ellipse 50% 70% at 60% 30%, rgba(99, 102, 241, 0.12) 0%, transparent 50%);
-            animation: gradientPulse 8s ease-in-out infinite alternate;
-        }
+    /* ── BUTTONS ── */
+    .btn{display:inline-flex;align-items:center;gap:.4rem;padding:.45rem .9rem;border-radius:var(--r-sm);border:1px solid transparent;font-family:var(--font-b);font-size:.82rem;font-weight:500;cursor:pointer;transition:all var(--t);white-space:nowrap}
+    .btn-primary{background:var(--red);color:#fff;border-color:var(--red);box-shadow:0 2px 8px rgba(192,57,43,.3)}
+    .btn-primary:hover{background:var(--blue-light);box-shadow:0 4px 16px rgba(192,57,43,.45)}
+    .btn-ghost{background:transparent;color:var(--text-2);border-color:var(--border-med)}
+    .btn-ghost:hover{background:#eef0f4;color:var(--text-1);border-color:var(--border-med)}
+    .btn-danger{background:var(--red-dim);color:#ff8a78;border-color:var(--red-glow)}
+    .btn-danger:hover{background:var(--red);color:#fff;border-color:var(--red)}
+    .btn-sm{padding:.3rem .6rem;font-size:.75rem}
+    .btn-icon{padding:.45rem;width:34px;height:34px;justify-content:center}
 
-        @keyframes gradientPulse {
-            0%   { opacity: 0.7; }
-            100% { opacity: 1; }
-        }
+    /* ── VIEW AREA ── */
+    #view-area{flex:1;overflow:hidden;position:relative}
+    .view-pane{position:absolute;inset:0;overflow-y:auto;padding:1.5rem;animation:vFade .22s ease both;background:var(--bg-base)}
+    .view-pane.hidden{display:none!important}
+    @keyframes vFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    #view-calendar{position:absolute;inset:0;background:#f0f2f5}
 
-        /* Grid lines decorativos */
-        #login-screen::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background-image:
-                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-            background-size: 48px 48px;
-            mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
-        }
+    /* ── PAGE HEADER ── */
+    .page-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:.75rem}
+    .ph-left{display:flex;flex-direction:column;gap:2px}
+    .page-title{font-family:var(--font-d);font-size:1.4rem;font-weight:800;color:var(--text-1);letter-spacing:-.4px}
+    .page-sub{font-size:.78rem;color:var(--text-2);font-family:var(--font-m)}
 
-        .login-wrapper {
-            position: relative;
-            z-index: 2;
-            display: flex;
-            width: 90%;
-            max-width: 900px;
-            min-height: 540px;
-            border-radius: 1.5rem;
-            overflow: hidden;
-            box-shadow:
-                0 0 0 1px rgba(255,255,255,0.06),
-                0 40px 80px rgba(0,0,0,0.6),
-                0 0 120px rgba(37, 99, 235, 0.15);
-            animation: cardAppear 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
-        }
+    /* ── SEARCH ── */
+    .search-wrap{position:relative;flex:1;min-width:180px;max-width:320px}
+    .search-wrap .si{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-3);font-size:.8rem;pointer-events:none}
+    .search-input{width:100%;padding:.5rem .75rem .5rem 2.1rem;background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-sm);color:var(--text-1);font-family:var(--font-b);font-size:.82rem;transition:all var(--t)}
+    .search-input::placeholder{color:var(--text-3)}
+    .search-input:focus{outline:none;border-color:var(--red-glow);box-shadow:0 0 0 3px rgba(192,57,43,.08)}
 
-        @keyframes cardAppear {
-            from { opacity: 0; transform: translateY(30px) scale(0.97); }
-            to   { opacity: 1; transform: translateY(0) scale(1); }
-        }
+    /* ── STAT CARDS ── */
+    .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.875rem;margin-bottom:1.25rem}
+    .stat-card{background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-md);padding:1.25rem 1.25rem 1rem;position:relative;overflow:hidden;transition:border-color var(--t),transform var(--t);box-shadow:var(--sh-sm)}
+    .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+    .stat-card.blue::before{background:var(--blue)}
+    .stat-card.green::before{background:var(--green)}
+    .stat-card.red::before{background:var(--red)}
+    .stat-card.amber::before{background:var(--amber)}
+    .stat-card.clickable{cursor:pointer}
+    .stat-card.clickable:hover{border-color:var(--border-med);transform:translateY(-2px);box-shadow:var(--sh-sm)}
+    .stat-icon{width:32px;height:32px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:.85rem;margin-bottom:.875rem}
+    .stat-card.blue  .stat-icon{background:var(--blue-dim);color:var(--blue-light)}
+    .stat-card.green .stat-icon{background:var(--green-dim);color:var(--green)}
+    .stat-card.red   .stat-icon{background:var(--red-dim);color:#ff8a78}
+    .stat-card.amber .stat-icon{background:rgba(90,106,126,.12);color:#5a6a7e}
+    .stat-value{font-family:var(--font-d);font-size:2rem;font-weight:800;line-height:1;margin-bottom:.3rem;letter-spacing:-1px}
+    .stat-card.blue  .stat-value{color:var(--blue-light)}
+    .stat-card.green .stat-value{color:var(--green)}
+    .stat-card.red   .stat-value{color:#ff8a78}
+    .stat-card.amber .stat-value{color:#4a5568}
+    .stat-label{font-size:.72rem;color:var(--text-2);text-transform:uppercase;letter-spacing:.8px;font-weight:500}
+    .stat-hint{font-size:.68rem;color:var(--text-3);margin-top:.4rem;font-family:var(--font-m)}
 
-        /* Panel izquierdo — Brand */
-        .login-brand {
-            flex: 1;
-            background: linear-gradient(145deg, #0f1f3d 0%, #0d1526 50%, #0a1020 100%);
-            border-right: 1px solid rgba(255,255,255,0.06);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: flex-start;
-            padding: 3rem 2.5rem;
-            position: relative;
-            overflow: hidden;
-        }
+    /* ── PANELS ── */
+    .panel{background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-md);overflow:hidden;margin-bottom:1.25rem;box-shadow:var(--sh-sm)}
+    .panel-hdr{padding:.875rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:.75rem}
+    .panel-title{font-family:var(--font-d);font-size:.85rem;font-weight:700;color:var(--text-1);letter-spacing:-.2px}
+    .panel-body{padding:1.25rem}
 
-        .login-brand::before {
-            content: '';
-            position: absolute;
-            top: -60px; right: -60px;
-            width: 260px; height: 260px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(37,99,235,0.2) 0%, transparent 70%);
-        }
+    /* ── FILTERS ── */
+    .filters-row{display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1.25rem}
+    .fg{display:flex;flex-direction:column;gap:.3rem;flex:1;min-width:140px}
+    .fg-label{font-size:.68rem;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.8px}
+    .fg-select{padding:.5rem .75rem;background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-sm);color:var(--text-1);font-family:var(--font-b);font-size:.82rem;cursor:pointer;transition:all var(--t);-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a6a7e'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:2rem}
+    .fg-select:focus{outline:none;border-color:var(--red-glow);box-shadow:0 0 0 3px rgba(192,57,43,.08)}
 
-        .login-brand::after {
-            content: '';
-            position: absolute;
-            bottom: -40px; left: -40px;
-            width: 180px; height: 180px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(16,185,129,0.15) 0%, transparent 70%);
-        }
+    /* ── PERIOD TABLE ── */
+    .ptable{width:100%;border-collapse:collapse}
+    .ptable tr{border-bottom:1px solid var(--border)}
+    .ptable tr:last-child{border-bottom:none}
+    .ptable td{padding:.75rem 0;font-size:.82rem}
+    .ptable td:first-child{color:var(--text-2)}
+    .ptable td:last-child{text-align:right;font-family:var(--font-m);font-weight:500;color:var(--text-1);font-size:.9rem}
 
-        .brand-icon-wrap {
-            width: 64px; height: 64px;
-            background: linear-gradient(135deg, var(--primary), #60a5fa);
-            border-radius: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.6rem;
-            color: white;
-            margin-bottom: 1.75rem;
-            box-shadow: 0 8px 24px rgba(37,99,235,0.4);
-        }
+    /* ── CHART ── */
+    .chart-wrap{position:relative;height:240px}
 
-        .brand-title {
-            font-size: 2rem;
-            font-weight: 800;
-            color: #ffffff;
-            line-height: 1.1;
-            margin-bottom: 0.75rem;
-            letter-spacing: -0.5px;
-        }
+    /* ── JOB GRID ── */
+    .job-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.875rem}
+    .job-card{background:#ffffff;border:1px solid var(--border-med);border-left:3px solid var(--red);border-radius:var(--r-md);padding:1.1rem 1.1rem .9rem;cursor:pointer;transition:all var(--t);display:flex;flex-direction:column;gap:.75rem;box-shadow:var(--sh-sm)}
+    .job-card:hover{border-color:rgba(192,57,43,.3);border-left-color:var(--red);background:#fafbfc;transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.1)}
+    .job-card.delayed{border-left-color:var(--red)}
+    .job-card.completed{border-left-color:var(--green)}
+    .jc-name{font-family:var(--font-d);font-size:.95rem;font-weight:700;color:var(--text-1);letter-spacing:-.2px;margin-bottom:.25rem}
+    .jc-meta{display:flex;align-items:center;gap:.4rem;font-size:.75rem;color:var(--text-2);margin-bottom:.15rem}
+    .jc-meta i{color:var(--text-3);width:12px;text-align:center}
+    .jc-progress-wrap{background:var(--bg-base);border-radius:3px;height:3px;overflow:hidden;margin-top:.2rem}
+    .jc-progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--blue-light));border-radius:3px;transition:width .5s ease}
+    .jc-progress-txt{font-family:var(--font-m);font-size:.68rem;color:var(--text-3);text-align:right;margin-top:.3rem}
+    .badge{display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .5rem;border-radius:4px;font-size:.68rem;font-weight:600;font-family:var(--font-m)}
+    .badge-blue{background:var(--blue-dim);color:var(--blue-light)}
+    .badge-amber{background:rgba(90,106,126,.12);color:#5a6a7e}
+    .badge-green{background:var(--green-dim);color:var(--green)}
+    .badge-red{background:var(--red-dim);color:#ff8a78}
 
-        .brand-subtitle {
-            font-size: 0.95rem;
-            color: rgba(255,255,255,0.45);
-            line-height: 1.6;
-            max-width: 240px;
-            font-weight: 400;
-        }
+    /* ── DRILLDOWN ── */
+    .dd-hdr{display:flex;align-items:center;gap:.875rem;margin-bottom:1.25rem;flex-wrap:wrap}
+    .dd-title{font-family:var(--font-d);font-size:1.1rem;font-weight:800;color:var(--text-1)}
 
-        .brand-divider {
-            width: 40px;
-            height: 2px;
-            background: linear-gradient(90deg, var(--primary), transparent);
-            margin: 1.5rem 0;
-            border-radius: 2px;
-        }
+    /* ── CALENDAR ── */
+    #view-calendar .fc{height:100%!important;font-family:var(--font-b)!important}
+    #view-calendar .fc-toolbar{padding:.875rem 1.25rem;background:#ffffff;border-bottom:1px solid var(--border);margin-bottom:0!important}
+    #view-calendar .fc-toolbar-title{font-family:var(--font-d)!important;font-size:1rem!important;font-weight:800!important;color:var(--text-1)!important}
+    #view-calendar .fc-button{background:#ffffff!important;border:1px solid var(--border-med)!important;color:var(--text-2)!important;font-family:var(--font-b)!important;font-size:.78rem!important;padding:.35rem .75rem!important;box-shadow:none!important;border-radius:var(--r-sm)!important;transition:all var(--t)!important}
+    #view-calendar .fc-button:hover{background:#f0f2f5!important;border-color:var(--border-med)!important;color:var(--text-1)!important}
+    #view-calendar .fc-button-primary:not(:disabled).fc-button-active{background:var(--red-dim)!important;border-color:var(--red-glow)!important;color:var(--red)!important}
+    #view-calendar .fc-daygrid-day{background:#ffffff;border-color:var(--border)!important}
+    #view-calendar .fc-col-header-cell{background:#f0f2f5;border-color:var(--border)!important}
+    #view-calendar .fc-col-header-cell-cushion{font-size:.72rem!important;font-weight:600!important;text-transform:uppercase;letter-spacing:.8px;color:var(--text-2)!important;padding:.5rem!important}
+    #view-calendar .fc-daygrid-day-number{font-size:.78rem!important;color:var(--text-1)!important;font-family:var(--font-m)!important;padding:.35rem!important}
+    #view-calendar .fc-day-today{background:rgba(192,57,43,.05)!important}
+    #view-calendar .fc-day-today .fc-daygrid-day-number{color:var(--red)!important;font-weight:600!important}
+    .fc-event-job{font-size:.72rem!important;font-weight:500!important;font-family:var(--font-b)!important;border-radius:3px!important;cursor:pointer!important;padding:1px 4px!important}
+    .fc-multiday-part{border-radius:0!important;margin:0!important}
+    .fc-multiday-first{border-radius:3px 0 0 3px!important}
+    .fc-multiday-last{border-radius:0 3px 3px 0!important}
+    .fc-multiday-mid{border-left:none!important;border-right:none!important}
 
-        .brand-tagline {
-            font-family: var(--font-mono);
-            font-size: 0.7rem;
-            color: rgba(37,99,235,0.8);
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            font-weight: 500;
-        }
+    /* ── MODAL ── */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:800;padding:1rem;backdrop-filter:blur(4px);animation:mBgIn .2s ease both}
+    @keyframes mBgIn{from{opacity:0}to{opacity:1}}
+    .modal{background:var(--bg-panel);border:1px solid var(--border-med);border-radius:var(--r-lg);width:100%;max-width:580px;max-height:90vh;display:flex;flex-direction:column;box-shadow:var(--sh-lg);animation:mIn .25s cubic-bezier(.16,1,.3,1) both;overflow:hidden}
+    @keyframes mIn{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+    .modal-bar{height:3px;background:linear-gradient(90deg,var(--red),#5a6a7e);flex-shrink:0}
+    .modal-hdr{padding:1.1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+    .modal-hdr-title{font-family:var(--font-d);font-size:1rem;font-weight:800;color:var(--text-1);letter-spacing:-.3px}
+    .modal-body{padding:1.25rem;overflow-y:auto;flex:1}
+    .modal-footer{padding:.875rem 1.25rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:.5rem;flex-shrink:0;background:#f7f8fa}
 
-        /* Panel derecho — Formulario */
-        .login-form-panel {
-            flex: 1;
-            background: #0d1526;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            padding: 3rem 2.5rem;
-        }
+    /* ── FORM ── */
+    .form-group{margin-bottom:1rem}
+    .form-label{display:block;font-size:.7rem;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.4rem}
+    .form-control{width:100%;padding:.65rem .875rem;background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-sm);color:var(--text-1);font-family:var(--font-b);font-size:.875rem;transition:all var(--t);-webkit-appearance:none}
+    .form-control::placeholder{color:var(--text-3)}
+    .form-control:focus{outline:none;border-color:rgba(192,57,43,.45);box-shadow:0 0 0 3px rgba(192,57,43,.08);background:rgba(192,57,43,.02)}
+    textarea.form-control{resize:vertical;min-height:80px;line-height:1.5}
+    select.form-control{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7a99'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:2rem}
+    .form-row{display:grid;gap:.875rem}
+    .cols-2{grid-template-columns:1fr 1fr}
+    .cols-3{grid-template-columns:1fr 1fr 1fr}
+    .form-section{font-size:.68rem;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin:1.25rem 0 .75rem;padding-bottom:.4rem;border-bottom:1px solid var(--border)}
 
-        .login-form-title {
-            font-size: 1.35rem;
-            font-weight: 700;
-            color: #f1f5f9;
-            margin-bottom: 0.4rem;
-        }
+    /* ── TABS ── */
+    .tabs{display:flex;gap:.1rem;background:#eef0f4;border-radius:var(--r-sm);padding:3px;margin-bottom:1.1rem}
+    .tab-btn{flex:1;padding:.45rem .75rem;background:none;border:none;border-radius:4px;cursor:pointer;font-family:var(--font-b);font-size:.78rem;font-weight:500;color:var(--text-3);transition:all var(--t)}
+    .tab-btn.active{background:var(--bg-card);color:var(--text-1);box-shadow:var(--sh-sm)}
 
-        .login-form-hint {
-            font-size: 0.85rem;
-            color: rgba(255,255,255,0.35);
-            margin-bottom: 2rem;
-            font-weight: 400;
-        }
+    /* ── CHECKLIST ── */
+    .checklist-wrap{display:flex;flex-direction:column;gap:.4rem}
+    .check-item{background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-sm);padding:.75rem .875rem;transition:background var(--t),border-color var(--t)}
+    .check-item.done{background:rgba(29,184,122,.05);border-color:rgba(29,184,122,.2)}
+    .check-row{display:flex;align-items:center;gap:.75rem}
+    .check-box{width:16px;height:16px;accent-color:var(--green);cursor:pointer;flex-shrink:0}
+    .check-date{font-family:var(--font-m);font-size:.8rem;color:var(--text-1);font-weight:500}
+    .check-badge{padding:.15rem .5rem;border-radius:4px;font-size:.65rem;font-weight:600;font-family:var(--font-m)}
+    .check-badge.done{background:var(--green-dim);color:var(--green)}
+    .check-badge.pending{background:var(--bg-hover);color:var(--text-3)}
+    .comment-wrap{margin-top:.5rem;padding-left:1.75rem}
+    .comment-input{width:100%;padding:.4rem .65rem;background:#f7f8fa;border:1px solid var(--border-med);border-radius:var(--r-sm);color:var(--text-2);font-family:var(--font-b);font-size:.78rem;transition:all var(--t)}
+    .comment-input:focus{outline:none;border-color:var(--blue-glow);color:var(--text-1)}
 
-        .login-field {
-            margin-bottom: 1.25rem;
-        }
+    /* ── HISTORY ── */
+    .history-list{display:flex;flex-direction:column;gap:.4rem;max-height:280px;overflow-y:auto}
+    .history-item{padding:.65rem .875rem;background:#ffffff;border:1px solid var(--border-med);border-left:3px solid var(--green);border-radius:var(--r-sm);font-size:.78rem}
+    .history-date{font-family:var(--font-m);font-weight:500;color:var(--green);margin-bottom:.2rem}
+    .history-comment{color:var(--text-2);font-style:italic}
 
-        .login-field label {
-            display: block;
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: rgba(255,255,255,0.5);
-            letter-spacing: 0.8px;
-            text-transform: uppercase;
-            margin-bottom: 0.5rem;
-        }
+    /* ── JOB DETAIL ── */
+    .jd-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1rem}
+    .jd-field{display:flex;flex-direction:column;gap:2px}
+    .jd-fl{font-size:.65rem;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.8px}
+    .jd-fv{font-size:.82rem;color:var(--text-1)}
+    .jd-scope{background:#f7f8fa;border:1px solid var(--border-med);border-radius:var(--r-sm);padding:.65rem .875rem;font-size:.82rem;color:var(--text-2);line-height:1.5;margin-bottom:1rem}
 
-        .login-input-wrap {
-            position: relative;
-        }
+    /* ── TOAST ── */
+    #toast-container{position:fixed;bottom:1.25rem;right:1.25rem;z-index:9000;display:flex;flex-direction:column;gap:.4rem}
+    .toast{padding:.75rem 1rem;background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-md);color:var(--text-1);font-size:.82rem;display:flex;align-items:center;gap:.6rem;min-width:220px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:toastIn .25s cubic-bezier(.16,1,.3,1) both;transition:opacity .3s}
+    @keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+    .toast.ts{border-left:3px solid var(--green)}.toast.ts i{color:var(--green)}
+    .toast.tw{border-left:3px solid var(--amber)}.toast.tw i{color:var(--amber)}
+    .toast.ti{border-left:3px solid var(--blue)}.toast.ti i{color:var(--blue-light)}
 
-        .login-input-wrap i {
-            position: absolute;
-            left: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: rgba(255,255,255,0.25);
-            font-size: 0.85rem;
-            pointer-events: none;
-            transition: color 0.2s;
-        }
+    /* ── EMPTY ── */
+    .empty{grid-column:1/-1;text-align:center;padding:3rem 1rem;color:var(--text-3)}
+    .empty i{font-size:2rem;margin-bottom:.75rem;display:block}
+    .empty p{font-size:.82rem}
 
-        .login-input {
-            width: 100%;
-            padding: 0.85rem 0.85rem 0.85rem 2.5rem;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 0.625rem;
-            color: #f1f5f9;
-            font-size: 0.95rem;
-            font-family: var(--font-main);
-            transition: all 0.2s;
-            -webkit-appearance: none;
-        }
-
-        .login-input::placeholder { color: rgba(255,255,255,0.2); }
-
-        .login-input:focus {
-            outline: none;
-            border-color: rgba(37,99,235,0.7);
-            background: rgba(37,99,235,0.08);
-            box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
-        }
-
-        .login-input:focus + i,
-        .login-input-wrap:focus-within i {
-            color: rgba(37,99,235,0.8);
-        }
-
-        /* Fix: icon after input approach */
-        .login-input-wrap .field-icon {
-            position: absolute;
-            left: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: rgba(255,255,255,0.25);
-            font-size: 0.85rem;
-            pointer-events: none;
-            transition: color 0.2s;
-        }
-
-        .login-input:focus ~ .field-icon {
-            color: var(--primary);
-        }
-
-        .btn-login {
-            width: 100%;
-            padding: 0.9rem;
-            background: linear-gradient(135deg, var(--primary), #3b82f6);
-            color: white;
-            border: none;
-            border-radius: 0.625rem;
-            font-size: 0.95rem;
-            font-weight: 700;
-            font-family: var(--font-main);
-            cursor: pointer;
-            transition: all 0.25s;
-            margin-top: 0.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            letter-spacing: 0.3px;
-            box-shadow: 0 4px 20px rgba(37,99,235,0.35);
-        }
-
-        .btn-login:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 8px 30px rgba(37,99,235,0.5);
-            background: linear-gradient(135deg, #3b82f6, var(--primary));
-        }
-
-        .btn-login:active { transform: translateY(0); }
-
-        #login-error {
-            margin-top: 1rem;
-            padding: 0.75rem 1rem;
-            background: rgba(239,68,68,0.1);
-            border: 1px solid rgba(239,68,68,0.25);
-            border-radius: 0.5rem;
-            color: #fca5a5;
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        /* Responsive login */
-        @media (max-width: 640px) {
-            .login-brand { display: none; }
-            .login-wrapper {
-                max-width: 420px;
-                min-height: auto;
-                border-radius: 1.25rem;
-            }
-            .login-form-panel { padding: 2.5rem 2rem; }
-        }
-
-        /* ============================================
-           APP LAYOUT (sin cambios)
-        ============================================ */
-        #app-container {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            overflow: hidden;
-        }
-
-        header {
-            background: var(--white);
-            padding: 1rem;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-        }
-
-        .logo {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: var(--primary);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        main {
-            flex: 1;
-            overflow: hidden;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-        }
-
-        #view-jobs {
-            padding: 1rem;
-            height: 100%;
-            overflow-y: auto;
-        }
-
-        .jobs-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .search-wrapper {
-            flex: 1;
-            min-width: 200px;
-            max-width: 400px;
-            position: relative;
-        }
-        .search-wrapper i {
-            position: absolute;
-            left: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--secondary);
-        }
-        .search-input {
-            width: 100%;
-            padding: 0.5rem 0.5rem 0.5rem 2.2rem;
-            border: 1px solid var(--border);
-            border-radius: 0.375rem;
-            font-size: 0.9rem;
-        }
-
-        .job-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1rem;
-        }
-        .job-card {
-            background: white;
-            border: 1px solid var(--border);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            cursor: pointer;
-            transition: 0.2s;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-        .job-card:hover { border-color: var(--job-color); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .job-title { font-weight: 700; color: var(--job-color); font-size: 1.1rem; margin-bottom: 0.5rem; }
-        .job-info { font-size: 0.85rem; color: var(--secondary); margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem; }
-
-        #view-dashboard {
-            padding: 1rem;
-            height: 100%;
-            overflow-y: auto;
-        }
-
-        .dashboard-filters {
-            background: white;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin-bottom: 1rem;
-            border: 1px solid var(--border);
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card-dashboard {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 0.5rem;
-            border: 1px solid var(--border);
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        .stat-value { font-size: 2.5rem; font-weight: 800; color: var(--primary); margin: 0.5rem 0; }
-        .stat-label { font-size: 0.85rem; color: var(--secondary); text-transform: uppercase; letter-spacing: 0.5px; }
-        .stat-hint { font-size: 0.7rem; color: #94a3b8; margin-top: 5px; }
-        .stat-card-dashboard.danger .stat-value { color: var(--danger); }
-        .stat-card-dashboard.success .stat-value { color: var(--success); }
-
-        .period-stats {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 0.5rem;
-            border: 1px solid var(--border);
-            margin-bottom: 2rem;
-        }
-        .period-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid var(--bg-light);
-        }
-        .period-row:last-child { border-bottom: none; }
-        .period-label { font-weight: 600; color: var(--secondary); }
-        .period-number { font-weight: 700; color: var(--dark); }
-
-        .chart-container {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 0.5rem;
-            border: 1px solid var(--border);
-            height: 350px;
-            position: relative;
-        }
-
-        #drilldown-list .job-card { border-left: 4px solid transparent; }
-        #drilldown-list .job-card.delayed { border-left-color: var(--danger); }
-        #drilldown-list .job-card.completed { border-left-color: var(--success); }
-
-        #view-calendar {
-            width: 100%;
-            height: 100%;
-            padding: 0;
-            background: white;
-            display: flex;
-            flex-direction: column;
-        }
-        .fc { height: 100% !important; flex: 1; }
-        .fc .fc-toolbar-title { font-size: 1.2rem; }
-        .fc .fc-toolbar button { background-color: var(--primary); border: none; color: white; }
-        .fc .fc-toolbar button:hover { background-color: var(--primary-dark); }
-        .fc-event-job { background-color: var(--job-color) !important; border-color: var(--job-color) !important; cursor: pointer; }
-        .fc-event-job.done { background-color: var(--success) !important; border-color: var(--success) !important; opacity: 0.6; }
-
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 500;
-            padding: 1rem;
-            backdrop-filter: blur(2px);
-        }
-
-        .modal {
-            background: white;
-            border-radius: 0.75rem;
-            width: 100%;
-            max-width: 600px;
-            max-height: 90vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
-        }
-
-        .modal-header {
-            padding: 1.25rem;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--bg-light);
-        }
-
-        .modal-body {
-            padding: 1.5rem;
-            overflow-y: auto;
-        }
-
-        .modal-footer {
-            padding: 1rem 1.5rem;
-            border-top: 1px solid var(--border);
-            display: flex;
-            justify-content: flex-end;
-            gap: 0.75rem;
-            background: var(--bg-light);
-        }
-
-        .form-group { margin-bottom: 1rem; text-align: left; }
-        .form-group label { display: block; margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 600; }
-        .form-control {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid var(--border);
-            border-radius: 0.375rem;
-            font-size: 1rem;
-            font-family: var(--font-main);
-            -webkit-appearance: none;
-        }
-
-        .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
-        .tab-btn {
-            flex: 1;
-            padding: 0.75rem;
-            background: none;
-            border: none;
-            border-bottom: 2px solid transparent;
-            cursor: pointer;
-            font-weight: 600;
-            color: var(--secondary);
-            font-family: var(--font-main);
-        }
-        .tab-btn.active { border-bottom-color: var(--primary); color: var(--primary); }
-
-        .checklist-wrapper { border: 1px solid var(--border); border-radius: 0.5rem; overflow: hidden; }
-        .checklist-item {
-            padding: 1rem;
-            border-bottom: 1px solid var(--border);
-            background: white;
-            transition: background 0.2s;
-        }
-        .checklist-item:last-child { border-bottom: none; }
-        .checklist-item.done { background-color: #f0fdf4; }
-        .check-row { display: flex; align-items: center; gap: 1rem; }
-        .check-box { width: 20px; height: 20px; accent-color: var(--success); cursor: pointer; }
-        .check-date { font-weight: 600; color: var(--dark); }
-        .check-status { font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; background: #e2e8f0; }
-        .check-status.done { background: var(--success); color: white; }
-        .check-comment-box { margin-top: 0.5rem; padding-left: 2.5rem; }
-        .comment-input { width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px; font-size: 0.85rem; margin-bottom: 0.5rem; font-family: var(--font-main); }
-        .history-list-job { margin-top: 1rem; }
-        .history-item-job {
-            font-size: 0.85rem;
-            padding: 0.5rem;
-            border-left: 3px solid var(--job-color);
-            background: #f8fafc;
-            margin-bottom: 0.5rem;
-        }
-        .history-comment { font-style: italic; color: var(--secondary); margin-top: 2px; }
-
-        #toast-container {
-            position: fixed;
-            bottom: 1rem;
-            right: 1rem;
-            z-index: 2000;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-        .toast {
-            padding: 1rem;
-            border-radius: 0.375rem;
-            background: var(--dark);
-            color: white;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-            animation: slideIn 0.3s ease-out;
-            min-width: 250px;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.9rem;
-        }
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        @media (max-width: 768px) {
-            header { padding: 0.75rem 1rem; flex-direction: column; }
-            .header-actions { width: 100%; display: flex; justify-content: space-between; margin-top: 10px; }
-            .logo span { font-size: 1rem; }
-            .dashboard-filters { grid-template-columns: 1fr; }
-            .stat-value { font-size: 2rem; }
-        }
+    /* ── RESPONSIVE ── */
+    @media(max-width:640px){
+        :root{--sidebar-w:56px}
+        .cols-3{grid-template-columns:1fr 1fr}
+        .cols-2{grid-template-columns:1fr}
+        .jd-grid{grid-template-columns:1fr}
+        .stats-row{grid-template-columns:1fr 1fr}
+        .panel-grid{grid-template-columns:1fr!important}
+    }
     </style>
 </head>
 <body>
 
-    <div id="toast-container"></div>
+<div id="toast-container"></div>
 
-    <!-- Login Screen — Rediseñado -->
-    <div id="login-screen">
-        <div class="login-wrapper">
-            <!-- Panel Izquierdo: Branding -->
-            <div class="login-brand">
-                <div class="brand-icon-wrap">
-                    <i class="fas fa-hard-hat"></i>
-                </div>
-                <div class="brand-tagline">Sistema de Gestión</div>
-                <div class="brand-divider"></div>
-                <div class="brand-title">Multiequipos</div>
-                <div class="brand-subtitle">Plataforma de gestión y programación de trabajos de mantenimiento.</div>
-            </div>
-
-            <!-- Panel Derecho: Formulario -->
-            <div class="login-form-panel">
-                <div class="login-form-title">Bienvenido de nuevo</div>
-                <div class="login-form-hint">Ingrese sus credenciales para continuar</div>
-
-                <form id="login-form" autocomplete="on">
-                    <div class="login-field">
-                        <label>Correo electrónico</label>
-                        <div class="login-input-wrap">
-                            <input type="email" id="username" class="login-input" placeholder="usuario@empresa.com" required autocomplete="email">
-                            <i class="fas fa-envelope field-icon"></i>
-                        </div>
-                    </div>
-                    <div class="login-field">
-                        <label>Contraseña</label>
-                        <div class="login-input-wrap">
-                            <input type="password" id="password" class="login-input" placeholder="••••••••" required autocomplete="current-password">
-                            <i class="fas fa-lock field-icon"></i>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn-login">
-                        <i class="fas fa-arrow-right-to-bracket"></i>
-                        Ingresar
-                    </button>
-                </form>
-
-                <div id="login-error" class="hidden">
-                    <i class="fas fa-circle-exclamation"></i>
-                    Email o contraseña incorrectos.
+<!-- LOGIN -->
+<div id="login-screen">
+    <div class="login-card">
+        <div class="login-bar"></div>
+        <div class="login-body">
+            <div class="login-logo-row">
+                <div class="login-icon"><i class="fas fa-hard-hat"></i></div>
+                <div class="login-brand">
+                    <div class="name">Multiequipos</div>
+                    <div class="tag">Gestión de Mantenimiento</div>
                 </div>
             </div>
+            <div class="login-h">Bienvenido</div>
+            <div class="login-sub">Ingrese sus credenciales para acceder al sistema</div>
+            <form id="login-form" autocomplete="on">
+                <div class="lf-g">
+                    <label class="lf-label">Correo electrónico</label>
+                    <div class="lf-wrap">
+                        <input type="email" id="username" class="lf-input" placeholder="usuario@empresa.com" required autocomplete="email">
+                        <i class="fas fa-envelope lf-icon"></i>
+                    </div>
+                </div>
+                <div class="lf-g">
+                    <label class="lf-label">Contraseña</label>
+                    <div class="lf-wrap">
+                        <input type="password" id="password" class="lf-input" placeholder="••••••••" required autocomplete="current-password">
+                        <i class="fas fa-lock lf-icon"></i>
+                    </div>
+                </div>
+                <button type="submit" class="btn-login"><i class="fas fa-arrow-right-to-bracket"></i> Ingresar</button>
+            </form>
+            <div id="login-error" class="hidden"><i class="fas fa-circle-exclamation"></i> Correo o contraseña incorrectos.</div>
         </div>
     </div>
+</div>
 
-    <!-- Main Application -->
-    <div id="app-container" class="hidden">
-        <header>
-            <div class="logo"><i class="fas fa-briefcase"></i> <span>Multiequipos</span></div>
-            <div class="header-actions" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                <button id="btn-view-dashboard" class="btn btn-primary" title="Ver Estadísticas">
-                    <i class="fas fa-chart-pie"></i>
-                </button>
-                <button id="btn-view-jobs" class="btn btn-secondary" title="Ver Lista de Trabajos">
-                    <i class="fas fa-list"></i>
-                </button>
-                <button id="btn-view-calendar" class="btn btn-secondary" title="Ver Calendario">
-                    <i class="fas fa-calendar-alt"></i>
-                </button>
-                <div style="border-left: 1px solid var(--border); height: 20px; margin: 0 5px;"></div>
-                <button id="btn-add" class="btn btn-primary">
-                    <i class="fas fa-plus"></i>
-                </button>
-                <button id="btn-logout" class="btn btn-secondary btn-sm">
-                    <i class="fas fa-sign-out-alt"></i>
-                </button>
-            </div>
-        </header>
+<!-- APP -->
+<div id="app-container" class="hidden">
+    <nav id="sidebar">
+        <div class="sb-logo"><i class="fas fa-hard-hat"></i></div>
+        <div class="sb-nav">
+            <button id="btn-view-dashboard" class="nav-btn active"><i class="fas fa-chart-pie"></i><span class="nav-tip">Dashboard</span></button>
+            <button id="btn-view-jobs" class="nav-btn"><i class="fas fa-briefcase"></i><span class="nav-tip">Trabajos</span></button>
+            <button id="btn-view-calendar" class="nav-btn"><i class="fas fa-calendar-alt"></i><span class="nav-tip">Calendario</span></button>
+        </div>
+        <div class="sb-spacer"></div>
+        <div class="sb-bottom">
+            <div class="sb-divider"></div>
+            <button id="btn-add" class="nav-btn hidden"><i class="fas fa-plus"></i><span class="nav-tip">Nuevo trabajo</span></button>
+            <button id="btn-logout" class="nav-btn"><i class="fas fa-sign-out-alt"></i><span class="nav-tip">Cerrar sesión</span></button>
+        </div>
+    </nav>
 
-        <main>
-            <div id="view-dashboard" class="hidden">
+    <div id="main-area">
+        <div id="topbar">
+            <div class="topbar-title">Multi<span>equipos</span></div>
+        </div>
+        <div id="view-area">
+
+            <!-- DASHBOARD -->
+            <div id="view-dashboard" class="view-pane">
                 <div id="dashboard-summary">
-                    <h3 style="margin-bottom:1rem; color:var(--job-color)">Dashboard de Estadísticas</h3>
-                    <div class="dashboard-filters">
-                        <div class="form-group">
-                            <label>Filtrar por Cliente</label>
-                            <select id="filter-client" class="form-control">
-                                <option value="all">Todos los clientes</option>
-                            </select>
+                    <div class="page-hdr">
+                        <div class="ph-left">
+                            <div class="page-title">Dashboard</div>
+                            <div class="page-sub">Resumen de trabajos de mantenimiento</div>
                         </div>
-                        <div class="form-group">
-                            <label>Tipo de Trabajo</label>
-                            <select id="filter-type" class="form-control">
+                    </div>
+                    <div class="filters-row">
+                        <div class="fg">
+                            <label class="fg-label">Cliente</label>
+                            <select id="filter-client" class="fg-select"><option value="all">Todos los clientes</option></select>
+                        </div>
+                        <div class="fg">
+                            <label class="fg-label">Tipo</label>
+                            <select id="filter-type" class="fg-select">
                                 <option value="all">Todos</option>
                                 <option value="periodic">Periódicos</option>
                                 <option value="unique">Únicos</option>
                             </select>
                         </div>
                     </div>
-                    <div class="stats-grid">
-                        <div class="stat-card-dashboard">
-                            <div class="stat-label">% Completado</div>
+                    <div class="stats-row">
+                        <div class="stat-card blue">
+                            <div class="stat-icon"><i class="fas fa-percent"></i></div>
                             <div class="stat-value" id="stat-percent">0%</div>
+                            <div class="stat-label">Completado</div>
                         </div>
-                        <div class="stat-card-dashboard success clickable" id="card-completed">
-                            <div class="stat-label">Total Realizados</div>
+                        <div class="stat-card green clickable" id="card-completed">
+                            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
                             <div class="stat-value" id="stat-completed">0</div>
-                            <div class="stat-hint"><i class="fas fa-mouse-pointer"></i> Ver lista</div>
+                            <div class="stat-label">Realizados</div>
+                            <div class="stat-hint">↗ Ver lista</div>
                         </div>
-                        <div class="stat-card-dashboard danger clickable" id="card-delayed">
-                            <div class="stat-label">Retrasados</div>
+                        <div class="stat-card red clickable" id="card-delayed">
+                            <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
                             <div class="stat-value" id="stat-delayed">0</div>
-                            <div class="stat-hint"><i class="fas fa-mouse-pointer"></i> Ver lista</div>
+                            <div class="stat-label">Retrasados</div>
+                            <div class="stat-hint">↗ Ver lista</div>
                         </div>
-                        <div class="stat-card-dashboard">
-                            <div class="stat-label">Pendientes</div>
+                        <div class="stat-card amber">
+                            <div class="stat-icon"><i class="fas fa-clock"></i></div>
                             <div class="stat-value" id="stat-pending">0</div>
+                            <div class="stat-label">Pendientes</div>
                         </div>
                     </div>
-                    <div class="period-stats">
-                        <h4 style="margin-bottom:1rem; color:var(--secondary)">Visitas Realizadas por Periodo</h4>
-                        <div class="period-row">
-                            <span class="period-label">Últimos 7 días</span>
-                            <span class="period-number" id="stat-visits-7">0</span>
+                    <div style="display:grid;grid-template-columns:260px 1fr;gap:1rem;" class="panel-grid">
+                        <div class="panel">
+                            <div class="panel-hdr"><div class="panel-title">Visitas por Periodo</div></div>
+                            <div class="panel-body" style="padding-top:.5rem">
+                                <table class="ptable">
+                                    <tr><td>Últimos 7 días</td><td id="stat-visits-7">0</td></tr>
+                                    <tr><td>Últimos 30 días</td><td id="stat-visits-30">0</td></tr>
+                                    <tr><td>Este año</td><td id="stat-visits-year">0</td></tr>
+                                </table>
+                            </div>
                         </div>
-                        <div class="period-row">
-                            <span class="period-label">Últimos 30 días</span>
-                            <span class="period-number" id="stat-visits-30">0</span>
+                        <div class="panel">
+                            <div class="panel-hdr">
+                                <div class="panel-title">Rendimiento Mensual</div>
+                                <span style="font-family:var(--font-m);font-size:.68rem;color:var(--text-3)" id="chart-year"></span>
+                            </div>
+                            <div class="panel-body"><div class="chart-wrap"><canvas id="monthlyChart"></canvas></div></div>
                         </div>
-                        <div class="period-row">
-                            <span class="period-label">Este Año</span>
-                            <span class="period-number" id="stat-visits-year">0</span>
-                        </div>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="monthlyChart"></canvas>
                     </div>
                 </div>
                 <div id="dashboard-drilldown" class="hidden">
-                    <div style="margin-bottom:1rem;">
-                        <button id="btn-back-dashboard" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Volver al Resumen</button>
-                        <h3 id="drilldown-title" style="display:inline-block; margin-left:10px; color:var(--job-color)">Lista</h3>
+                    <div class="dd-hdr">
+                        <button id="btn-back-dashboard" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Volver</button>
+                        <div class="dd-title" id="drilldown-title">Lista</div>
                     </div>
                     <div id="drilldown-list" class="job-grid"></div>
                 </div>
             </div>
 
-            <div id="view-jobs" class="hidden">
-                <div class="jobs-header">
-                    <h3 style="color:var(--job-color)">Mis Trabajos</h3>
-                    <div class="search-wrapper">
-                        <i class="fas fa-search"></i>
+            <!-- JOBS -->
+            <div id="view-jobs" class="view-pane hidden">
+                <div class="page-hdr">
+                    <div class="ph-left">
+                        <div class="page-title">Trabajos</div>
+                        <div class="page-sub" id="jobs-count-label">—</div>
+                    </div>
+                    <div class="search-wrap">
+                        <i class="fas fa-search si"></i>
                         <input type="text" id="job-search" class="search-input" placeholder="Buscar cliente...">
                     </div>
                 </div>
                 <div id="job-list-container" class="job-grid"></div>
             </div>
 
+            <!-- CALENDAR -->
             <div id="view-calendar" class="hidden"></div>
-        </main>
+        </div>
     </div>
+</div>
 
-    <!-- MODAL FORMULARIO -->
-    <div id="modal-form" class="modal-overlay hidden">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 id="modal-title">Nuevo Trabajo</h3>
-                <button class="btn btn-sm btn-secondary close-modal"><i class="fas fa-times"></i></button>
+<!-- MODAL FORM -->
+<div id="modal-form" class="modal-overlay hidden">
+    <div class="modal">
+        <div class="modal-bar"></div>
+        <div class="modal-hdr">
+            <div class="modal-hdr-title" id="modal-title">Nuevo Trabajo</div>
+            <button class="btn btn-ghost btn-icon close-modal"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <form id="job-form">
+                <input type="hidden" id="record-id">
+                <div class="form-group">
+                    <label class="form-label">Nombre / Cliente *</label>
+                    <input type="text" id="j-name" class="form-control" required placeholder="Empresa o cliente">
+                </div>
+                <div class="form-row cols-2">
+                    <div class="form-group">
+                        <label class="form-label">Persona de Contacto</label>
+                        <input type="text" id="j-contact" class="form-control" placeholder="Nombre">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Teléfono</label>
+                        <input type="tel" id="j-phone" class="form-control" placeholder="+506 ...">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ubicación</label>
+                    <input type="text" id="j-location" class="form-control" placeholder="Dirección o zona">
+                </div>
+                <div class="form-section">Programación</div>
+                <div class="form-row cols-3">
+                    <div class="form-group">
+                        <label class="form-label">Fecha de Inicio *</label>
+                        <input type="date" id="j-start-date" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Periodo (meses)</label>
+                        <input type="number" id="j-period" class="form-control" min="0" max="60" value="1" placeholder="0 = única">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Duración (días)</label>
+                        <input type="number" id="j-duration" class="form-control" min="1" max="365" value="1">
+                    </div>
+                </div>
+                <div class="form-section">Descripción</div>
+                <div class="form-group">
+                    <label class="form-label">Alcance del Trabajo</label>
+                    <textarea id="j-scope" class="form-control" rows="3" placeholder="Describe el alcance..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Información Adicional</label>
+                    <textarea id="j-additional" class="form-control" rows="2" placeholder="Notas, accesos, equipo..."></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost close-modal">Cancelar</button>
+            <button id="btn-save-job" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DETAILS -->
+<div id="modal-job-details" class="modal-overlay hidden">
+    <div class="modal">
+        <div class="modal-bar"></div>
+        <div class="modal-hdr">
+            <div class="modal-hdr-title">Detalles del Trabajo</div>
+            <div style="display:flex;gap:.4rem;align-items:center">
+                <button id="jd-btn-edit" class="btn btn-ghost btn-sm"><i class="fas fa-edit"></i> Editar</button>
+                <button id="jd-btn-delete" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
+                <button class="btn btn-ghost btn-icon close-modal"><i class="fas fa-times"></i></button>
             </div>
-            <div class="modal-body">
-                <form id="job-form">
-                    <input type="hidden" id="record-id">
-                    <div class="form-group">
-                        <label>Nombre / Cliente *</label>
-                        <input type="text" id="j-name" class="form-control" required>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                        <div class="form-group">
-                            <label>Persona Contacto</label>
-                            <input type="text" id="j-contact" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label>Teléfono</label>
-                            <input type="tel" id="j-phone" class="form-control">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Ubicación</label>
-                        <input type="text" id="j-location" class="form-control">
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                        <div class="form-group">
-                            <label>Fecha Inicio / Visita</label>
-                            <input type="date" id="j-start-date" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Periodo (Meses) <small style="font-weight:normal; color:var(--secondary)">(0 para visita única)</small></label>
-                            <input type="number" id="j-period" class="form-control" min="0" max="60" value="1" placeholder="Ej: 0, 1, 3...">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Alcance / Descripción del Trabajo</label>
-                        <textarea id="j-scope" class="form-control" rows="3"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Información Adicional</label>
-                        <textarea id="j-additional" class="form-control" rows="2"></textarea>
-                    </div>
-                </form>
+        </div>
+        <div class="modal-body">
+            <div style="margin-bottom:1rem">
+                <div style="font-family:var(--font-d);font-size:1.15rem;font-weight:800;color:var(--text-1);letter-spacing:-.3px;margin-bottom:.4rem" id="jd-client-name"></div>
+                <div style="display:flex;gap:.4rem;flex-wrap:wrap" id="jd-badges"></div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary close-modal">Cancelar</button>
-                <button type="button" id="btn-save-job" class="btn btn-primary">Guardar</button>
+            <div class="jd-grid">
+                <div class="jd-field"><div class="jd-fl"><i class="fas fa-user"></i> Contacto</div><div class="jd-fv" id="jd-contact">—</div></div>
+                <div class="jd-field"><div class="jd-fl"><i class="fas fa-phone"></i> Teléfono</div><div class="jd-fv" id="jd-phone">—</div></div>
+                <div class="jd-field" style="grid-column:1/-1"><div class="jd-fl"><i class="fas fa-map-marker-alt"></i> Ubicación</div><div class="jd-fv" id="jd-location">—</div></div>
+            </div>
+            <div style="font-size:.68rem;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.4rem">Alcance</div>
+            <div class="jd-scope" id="jd-scope"></div>
+            <div id="jd-additional-wrap" style="margin-bottom:1rem">
+                <div style="font-size:.68rem;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.4rem">Información Adicional</div>
+                <div class="jd-scope" id="jd-additional" style="margin-bottom:0"></div>
+            </div>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="jd-check">Programación</button>
+                <button class="tab-btn" data-tab="jd-hist">Historial</button>
+            </div>
+            <div id="jd-check" class="tab-content">
+                <div style="font-size:.72rem;color:var(--text-3);margin-bottom:.75rem;font-family:var(--font-m)" id="jd-period-label"></div>
+                <div id="jd-checklist-wrapper" class="checklist-wrap"></div>
+            </div>
+            <div id="jd-hist" class="tab-content hidden">
+                <div style="font-size:.78rem;color:var(--text-2);margin-bottom:.75rem">Registro de visitas completadas</div>
+                <div id="jd-history-list" class="history-list"></div>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Modal Detalles Trabajo -->
-    <div id="modal-job-details" class="modal-overlay hidden">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 id="jd-title">Detalles del Trabajo</h3>
-                <button class="btn btn-sm btn-secondary close-modal"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="modal-body">
-                <div style="margin-bottom:1rem; padding-bottom:1rem; border-bottom:1px solid var(--border);">
-                    <div style="display:flex; justify-content:space-between; align-items:start;">
-                        <div style="flex:1;">
-                            <h4 style="color:var(--job-color); margin-bottom:0.25rem;" id="jd-client-name"></h4>
-                            <div class="text-sm text-secondary"><i class="fas fa-user"></i> <span id="jd-contact"></span></div>
-                            <div class="text-sm text-secondary"><i class="fas fa-map-marker-alt"></i> <span id="jd-location"></span></div>
-                            <div class="text-sm text-secondary"><i class="fas fa-phone"></i> <span id="jd-phone"></span></div>
-                            <div style="margin-top:0.5rem;">
-                                <label class="text-sm text-secondary">Alcance:</label>
-                                <div style="background:#f8fafc; padding:0.5rem; border-radius:4px; font-size:0.9rem;" id="jd-scope"></div>
-                            </div>
-                        </div>
-                        <div style="display:flex; gap:0.5rem; margin-left:1rem;">
-                            <button id="jd-btn-edit" class="btn btn-sm btn-secondary"><i class="fas fa-edit"></i></button>
-                            <button id="jd-btn-delete" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </div>
-                </div>
-                <div class="tabs">
-                    <button class="tab-btn active" data-tab="jd-check">Programación</button>
-                    <button class="tab-btn" data-tab="jd-hist">Historial</button>
-                </div>
-                <div id="jd-check" class="tab-content">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-                        <small class="text-secondary" id="jd-period-label">Periodo: - meses</small>
-                    </div>
-                    <div id="jd-checklist-wrapper" class="checklist-wrapper"></div>
-                </div>
-                <div id="jd-hist" class="tab-content hidden">
-                    <h5 class="text-secondary" style="margin-bottom:0.5rem;">Registro de Trabajos Realizados</h5>
-                    <div id="jd-history-list" style="max-height: 300px; overflow-y: auto;"></div>
-                </div>
-            </div>
-        </div>
-    </div>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { 
-            getFirestore, collection, addDoc, updateDoc, deleteDoc,
-            doc, onSnapshot, query, orderBy 
-        } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
-        import { 
-            getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged 
-        } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+    const fbConfig = {
+        apiKey: "AIzaSyDmr0OxeUQGI-XnWaHwmTkJYccG7yM58T8",
+        authDomain: "multiequipos-app-c0f80.firebaseapp.com",
+        projectId: "multiequipos-app-c0f80",
+        storageBucket: "multiequipos-app-c0f80.firebasestorage.app",
+        messagingSenderId: "167104291774",
+        appId: "1:167104291774:web:b86324beda11a3cc6b0bef"
+    };
+    const fbApp  = initializeApp(fbConfig);
+    const db     = getFirestore(fbApp);
+    const auth   = getAuth(fbApp);
+    const jobsRef = collection(db, "maintenances");
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyDmr0OxeUQGI-XnWaHwmTkJYccG7yM58T8",
-            authDomain: "multiequipos-app-c0f80.firebaseapp.com",
-            projectId: "multiequipos-app-c0f80",
-            storageBucket: "multiequipos-app-c0f80.firebasestorage.app",
-            messagingSenderId: "167104291774",
-            appId: "1:167104291774:web:b86324beda11a3cc6b0bef"
-        };
+    let state = { user:null, jobs:[], calendar:null, currentView:'dashboard', chartInstance:null };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-        const jobsRef = collection(db, "maintenances");
+    /* AUTH */
+    const Auth = {
+        check: () => onAuthStateChanged(auth, user => {
+            if (user) {
+                state.user = user.email;
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('app-container').classList.remove('hidden');
+                App.show(); DB.listen();
+            } else {
+                document.getElementById('login-screen').classList.remove('hidden');
+                document.getElementById('app-container').classList.add('hidden');
+            }
+        }),
+        login: (u,p) => signInWithEmailAndPassword(auth,u,p)
+            .then(() => { document.getElementById('login-error').classList.add('hidden'); document.getElementById('login-form').reset(); })
+            .catch(() => document.getElementById('login-error').classList.remove('hidden')),
+        logout: () => signOut(auth).then(() => location.reload())
+    };
 
-        let state = {
-            user: null,
-            jobs: [],
-            calendar: null,
-            currentView: 'dashboard',
-            chartInstance: null
-        };
+    /* DB */
+    const DB = {
+        listen: () => {
+            if (!state.user) return;
+            onSnapshot(query(jobsRef, orderBy("name","asc")), snap => {
+                state.jobs = snap.docs.map(d => ({id:d.id,...d.data()}));
+                if (state.currentView==='jobs')      App.renderJobList();
+                if (state.currentView==='calendar')  App.renderCalendar();
+                if (state.currentView==='dashboard') Dashboard.render();
+            }, console.error);
+        },
+        add:    data => addDoc(jobsRef,{...data,createdAt:new Date()}).then(()=>Toast.show('Trabajo programado','success')).catch(console.error),
+        update: (data,id) => updateDoc(doc(db,"maintenances",id),data).then(()=>Toast.show('Registro actualizado','success')).catch(console.error),
+        delete: id => deleteDoc(doc(db,"maintenances",id)).then(()=>Toast.show('Trabajo eliminado','warning')).catch(console.error),
+        getById: id => state.jobs.find(j=>j.id===id)
+    };
 
-        // =====================================================
-        // FIX: El login-screen siempre es visible por defecto
-        // (gracias al HTML). onAuthStateChanged decide si
-        // mostrar el app o mantener el login.
-        // =====================================================
-        const Auth = {
-            check: () => {
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        state.user = user.email;
-                        // Ocultar login, mostrar app
-                        document.getElementById('login-screen').classList.add('hidden');
-                        document.getElementById('app-container').classList.remove('hidden');
-                        App.show();
-                        DB.listen();
+    /* JOB LOGIC */
+    const JL = {
+        generatePeriods: job => {
+            if (!job.startDate) return [];
+            const today=new Date(), endF=new Date(today.getFullYear(), 11, 31);
+            if (!job.checklist) job.checklist=[];
+            const excl=job.excludedDates||[], periods=[];
+            let cur=new Date(job.startDate);
+            const per=parseInt(job.periodMonths)||0;
+            const push = ds => {
+                const ex=job.checklist.find(p=>p.date===ds);
+                periods.push({date:ds,completed:ex?.completed||false,comment:ex?.comment||"",dateCompleted:ex?.dateCompleted||null});
+            };
+            if (per===0) {
+                const ds=cur.toISOString().split('T')[0];
+                if (!excl.includes(ds)) push(ds);
+                job.checklist.forEach(p=>{ if (!periods.find(x=>x.date===p.date)) periods.push(p); });
+            } else {
+                while (cur<=endF) {
+                    const ds=cur.toISOString().split('T')[0];
+                    if (!excl.includes(ds)) push(ds);
+                    cur.setMonth(cur.getMonth()+per);
+                }
+                job.checklist.forEach(p=>{ if (!periods.find(x=>x.date===p.date)) periods.push(p); });
+            }
+            periods.sort((a,b)=>new Date(a.date)-new Date(b.date));
+            return periods;
+        },
+        toggleCheck: (jobId,date,checked) => {
+            const job=DB.getById(jobId);
+            if (!job.checklist) job.checklist=[];
+            const idx=job.checklist.findIndex(p=>p.date===date);
+            const item={date,completed:checked,comment:idx>-1?job.checklist[idx].comment:"",dateCompleted:checked?new Date().toISOString().split('T')[0]:null};
+            if (idx>-1) job.checklist[idx]=item; else job.checklist.push(item);
+            job.checklist.sort((a,b)=>new Date(a.date)-new Date(b.date));
+            DB.update(job,jobId);
+            JobModal.renderChecklist(job); JobModal.renderHistory(job);
+        },
+        saveComment: (jobId,date,comment) => {
+            const job=DB.getById(jobId);
+            const idx=job.checklist.findIndex(p=>p.date===date);
+            if (idx>-1) { job.checklist[idx].comment=comment; DB.update(job,jobId); Toast.show('Comentario guardado','success'); }
+        }
+    };
+
+    /* DASHBOARD */
+    const Dashboard = {
+        root: name => name ? name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim().split(/\s+/)[0] : 'x',
+        populateClientFilter: () => {
+            const sel=document.getElementById('filter-client'), cur=sel.value;
+            const roots=new Set(); state.jobs.forEach(j=>roots.add(Dashboard.root(j.name)));
+            sel.innerHTML='<option value="all">Todos los clientes</option>';
+            Array.from(roots).sort().forEach(r=>{ const o=document.createElement('option'); o.value=r; o.textContent=r.charAt(0).toUpperCase()+r.slice(1); sel.appendChild(o); });
+            if (Array.from(sel.options).some(o=>o.value===cur)) sel.value=cur;
+        },
+        getData: () => {
+            const fc=document.getElementById('filter-client').value, ft=document.getElementById('filter-type').value;
+            const today=new Date().toISOString().split('T')[0];
+            let dItems=[],cItems=[],tot=0,comp=0,del=0,pend=0;
+            const yr=new Date().getFullYear(), mData=new Array(12).fill(0);
+            const now=new Date(), d7=new Date(),d30=new Date(),dy=new Date(yr,0,1);
+            d7.setDate(d7.getDate()-7); d30.setDate(d30.getDate()-30);
+            let v7=0,v30=0,vy=0;
+            state.jobs.forEach(job=>{
+                const isP=(parseInt(job.periodMonths)||0)>0;
+                if (ft==='periodic'&&!isP) return;
+                if (ft==='unique'&&isP) return;
+                if (fc!=='all'&&Dashboard.root(job.name)!==fc) return;
+                JL.generatePeriods(job).forEach(p=>{
+                    tot++;
+                    const pd=new Date(p.date+'T00:00:00');
+                    if (p.completed) {
+                        comp++; cItems.push({job,period:p});
+                        if (pd>=d7&&pd<=now) v7++;
+                        if (pd>=d30&&pd<=now) v30++;
+                        if (pd>=dy&&pd<=now) vy++;
+                        if (pd.getFullYear()===yr) mData[pd.getMonth()]++;
                     } else {
-                        // Mostrar login, ocultar app
-                        document.getElementById('login-screen').classList.remove('hidden');
-                        document.getElementById('app-container').classList.add('hidden');
+                        if (p.date<today) { del++; dItems.push({job,period:p}); } else pend++;
                     }
                 });
-            },
-            login: (u, p) => {
-                signInWithEmailAndPassword(auth, u, p)
-                    .then(() => {
-                        document.getElementById('login-error').classList.add('hidden');
-                        document.getElementById('login-form').reset();
-                    })
-                    .catch((error) => {
-                        document.getElementById('login-error').classList.remove('hidden');
-                        console.error(error);
-                    });
-            },
-            logout: () => {
-                signOut(auth).then(() => location.reload());
-            }
-        };
-
-        const DB = {
-            listen: () => {
-                if(!state.user) return;
-                const qJobs = query(jobsRef, orderBy("name", "asc"));
-                onSnapshot(qJobs, (snapshot) => {
-                    state.jobs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    if(state.currentView === 'jobs') App.renderJobList();
-                    if(state.currentView === 'calendar') App.renderCalendar();
-                    if(state.currentView === 'dashboard') Dashboard.render();
-                }, (error) => console.error("Error Jobs:", error));
-            },
-            add: (data) => {
-                const dataToSave = { ...data, createdAt: new Date() };
-                addDoc(jobsRef, dataToSave)
-                    .then(() => Toast.show('Trabajo programado', 'success'))
-                    .catch(e => console.error(e));
-            },
-            update: (updatedData, id) => {
-                const ref = doc(db, "maintenances", id);
-                return updateDoc(ref, updatedData)
-                    .then(() => Toast.show('Registro actualizado', 'success'))
-                    .catch(e => console.error(e));
-            },
-            delete: (id) => {
-                const ref = doc(db, "maintenances", id);
-                deleteDoc(ref)
-                    .then(() => Toast.show('Eliminado', 'warning'))
-                    .catch(e => console.error(e));
-            },
-            getById: (id) => state.jobs.find(item => item.id === id)
-        };
-
-        const JobLogic = {
-            generatePeriods: (job) => {
-                if(!job.startDate) return [];
-                const today = new Date();
-                const endFuture = new Date();
-                endFuture.setFullYear(today.getFullYear() + 2);
-                if (!job.checklist) job.checklist = [];
-                const excludedDates = job.excludedDates || [];
-                const periods = [];
-                let current = new Date(job.startDate);
-                const period = parseInt(job.periodMonths) || 0;
-
-                if (period === 0) {
-                    const dateStr = current.toISOString().split('T')[0];
-                    if (!excludedDates.includes(dateStr)) {
-                        const existing = job.checklist.find(p => p.date === dateStr);
-                        periods.push({
-                            date: dateStr,
-                            completed: existing ? existing.completed : false,
-                            comment: existing ? existing.comment : "",
-                            dateCompleted: existing ? existing.dateCompleted : null
-                        });
-                    }
-                    job.checklist.forEach(p => {
-                        if (!periods.find(x => x.date === p.date)) periods.push(p);
-                    });
-                    periods.sort((a, b) => new Date(a.date) - new Date(b.date));
-                    return periods;
+            });
+            return { stats:{pct:tot>0?Math.round(comp/tot*100):0,comp,del,pend,v7,v30,vy}, lists:{dItems,cItems}, chart:mData };
+        },
+        renderSummary: () => {
+            const d=Dashboard.getData();
+            document.getElementById('stat-percent').innerText   = d.stats.pct+'%';
+            document.getElementById('stat-completed').innerText = d.stats.comp;
+            document.getElementById('stat-delayed').innerText   = d.stats.del;
+            document.getElementById('stat-pending').innerText   = d.stats.pend;
+            document.getElementById('stat-visits-7').innerText   = d.stats.v7;
+            document.getElementById('stat-visits-30').innerText  = d.stats.v30;
+            document.getElementById('stat-visits-year').innerText = d.stats.vy;
+            Dashboard.updateChart(d.chart);
+        },
+        updateChart: mData => {
+            const ctx=document.getElementById('monthlyChart').getContext('2d');
+            if (state.chartInstance) state.chartInstance.destroy();
+            document.getElementById('chart-year').innerText = new Date().getFullYear();
+            state.chartInstance = new Chart(ctx,{
+                type:'bar',
+                data:{ labels:['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'], datasets:[{label:'Trabajos',data:mData,backgroundColor:'rgba(192,57,43,.7)',hoverBackgroundColor:'rgba(232,52,29,.9)',borderRadius:4,borderSkipped:false}] },
+                options:{ responsive:true, maintainAspectRatio:false,
+                    plugins:{ legend:{display:false}, tooltip:{backgroundColor:'#ffffff',borderColor:'rgba(0,0,0,.12)',borderWidth:1,titleColor:'#1a2030',bodyColor:'#5a6a7e',padding:10,cornerRadius:6} },
+                    scales:{ x:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#5a6a7e',font:{size:11,family:"'IBM Plex Mono'"}}}, y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#5a6a7e',precision:0,font:{size:11,family:"'IBM Plex Mono'"}}} }
                 }
+            });
+        },
+        showList: type => {
+            const d=Dashboard.getData();
+            const list=type==='delayed'?d.lists.dItems:d.lists.cItems;
+            const container=document.getElementById('drilldown-list');
+            document.getElementById('dashboard-summary').classList.add('hidden');
+            document.getElementById('dashboard-drilldown').classList.remove('hidden');
+            document.getElementById('drilldown-title').innerText=type==='delayed'?'Trabajos Retrasados':'Trabajos Realizados';
+            container.innerHTML='';
+            if (!list.length) { container.innerHTML='<div class="empty"><i class="fas fa-inbox"></i><p>Sin registros.</p></div>'; return; }
+            list.forEach(item=>{
+                const card=document.createElement('div');
+                card.className=`job-card ${type==='delayed'?'delayed':'completed'}`;
+                card.innerHTML=`<div><div class="jc-name">${item.job.name}</div><div class="jc-meta"><i class="fas fa-calendar-alt"></i>${item.period.date}</div><div class="jc-meta"><i class="fas fa-map-marker-alt"></i>${item.job.location||'—'}</div></div>${item.period.comment?`<div style="font-size:.75rem;color:var(--text-3);font-style:italic;background:var(--bg-input);padding:.5rem .65rem;border-radius:4px;border-left:2px solid var(--border-med)">"${item.period.comment}"</div>`:''}`;
+                card.onclick=()=>JobModal.open(item.job.id);
+                container.appendChild(card);
+            });
+        },
+        showSummary: () => {
+            document.getElementById('dashboard-drilldown').classList.add('hidden');
+            document.getElementById('dashboard-summary').classList.remove('hidden');
+            Dashboard.renderSummary();
+        },
+        render: () => { Dashboard.showSummary(); Dashboard.populateClientFilter(); }
+    };
 
-                while (current <= endFuture) {
-                    const dateStr = current.toISOString().split('T')[0];
-                    if (!excludedDates.includes(dateStr)) {
-                        const existing = job.checklist.find(p => p.date === dateStr);
-                        periods.push({
-                            date: dateStr,
-                            completed: existing ? existing.completed : false,
-                            comment: existing ? existing.comment : "",
-                            dateCompleted: existing ? existing.dateCompleted : null
-                        });
-                    }
-                    current.setMonth(current.getMonth() + period);
-                }
-
-                job.checklist.forEach(p => {
-                    if (!periods.find(x => x.date === p.date)) periods.push(p);
-                });
-                periods.sort((a, b) => new Date(a.date) - new Date(b.date));
-                return periods;
-            },
-
-            toggleCheck: (jobId, periodDate, isCompleted) => {
-                const job = DB.getById(jobId);
-                if(!job.checklist) job.checklist = [];
-                const index = job.checklist.findIndex(p => p.date === periodDate);
-                const newItem = {
-                    date: periodDate,
-                    completed: isCompleted,
-                    comment: index > -1 ? job.checklist[index].comment : "",
-                    dateCompleted: isCompleted ? new Date().toISOString().split('T')[0] : null
-                };
-                if(index > -1) job.checklist[index] = newItem;
-                else job.checklist.push(newItem);
-                job.checklist.sort((a,b) => new Date(a.date) - new Date(b.date));
-                DB.update(job, jobId);
-                JobModal.renderChecklist(job);
-                JobModal.renderHistory(job);
-            },
-
-            saveComment: (jobId, periodDate, comment) => {
-                const job = DB.getById(jobId);
-                const index = job.checklist.findIndex(p => p.date === periodDate);
-                if(index > -1) {
-                    job.checklist[index].comment = comment;
-                    DB.update(job, jobId);
-                    Toast.show('Comentario guardado', 'success');
-                }
-            }
-        };
-
-        const Dashboard = {
-            getRootName: (name) => {
-                if (!name) return 'sin-nombre';
-                const normalized = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                return normalized.toLowerCase().trim().split(/\s+/)[0];
-            },
-            populateClientFilter: () => {
-                const select = document.getElementById('filter-client');
-                const currentVal = select.value;
-                const uniqueRoots = new Set();
-                state.jobs.forEach(job => uniqueRoots.add(Dashboard.getRootName(job.name)));
-                const sortedRoots = Array.from(uniqueRoots).sort();
-                select.innerHTML = '<option value="all">Todos los clientes</option>';
-                sortedRoots.forEach(root => {
-                    const option = document.createElement('option');
-                    option.value = root;
-                    option.textContent = root.charAt(0).toUpperCase() + root.slice(1);
-                    select.appendChild(option);
-                });
-                if (Array.from(select.options).some(o => o.value === currentVal)) select.value = currentVal;
-            },
-            getFilteredData: () => {
-                const filterClient = document.getElementById('filter-client').value;
-                const filterType = document.getElementById('filter-type').value;
-                const todayStr = new Date().toISOString().split('T')[0];
-                let delayedItems = [], completedItems = [];
-                let totalPeriods = 0, completedPeriods = 0, delayedPeriods = 0, pendingPeriods = 0;
-                const currentYear = new Date().getFullYear();
-                const monthlyData = new Array(12).fill(0);
-                const now = new Date();
-                const date7DaysAgo = new Date(); date7DaysAgo.setDate(date7DaysAgo.getDate() - 7);
-                const date30DaysAgo = new Date(); date30DaysAgo.setDate(date30DaysAgo.getDate() - 30);
-                const startOfYear = new Date(currentYear, 0, 1);
-                let visits7 = 0, visits30 = 0, visitsYear = 0;
-
-                state.jobs.forEach(job => {
-                    const isPeriodic = (parseInt(job.periodMonths) || 0) > 0;
-                    if (filterType === 'periodic' && !isPeriodic) return;
-                    if (filterType === 'unique' && isPeriodic) return;
-                    const jobRoot = Dashboard.getRootName(job.name);
-                    if (filterClient !== 'all' && jobRoot !== filterClient) return;
-                    const periods = JobLogic.generatePeriods(job);
-                    periods.forEach(p => {
-                        totalPeriods++;
-                        const pDate = new Date(p.date + 'T00:00:00');
-                        if (p.completed) {
-                            completedPeriods++;
-                            completedItems.push({ job, period: p });
-                            if (pDate >= date7DaysAgo && pDate <= now) visits7++;
-                            if (pDate >= date30DaysAgo && pDate <= now) visits30++;
-                            if (pDate >= startOfYear && pDate <= now) visitsYear++;
-                            if (pDate.getFullYear() === currentYear) monthlyData[pDate.getMonth()]++;
-                        } else {
-                            if (p.date < todayStr) { delayedPeriods++; delayedItems.push({ job, period: p }); }
-                            else pendingPeriods++;
+    /* APP */
+    const App = {
+        init: () => { App.bindEvents(); Auth.check(); },
+        show: () => App.switchView('dashboard'),
+        switchView: v => {
+            state.currentView=v;
+            ['dashboard','jobs','calendar'].forEach(n=>{
+                document.getElementById(`btn-view-${n}`).classList.toggle('active',n===v);
+                document.getElementById(`view-${n}`).classList.toggle('hidden',n!==v);
+            });
+            const ba=document.getElementById('btn-add');
+            if (v==='dashboard') { ba.classList.add('hidden'); Dashboard.render(); }
+            else if (v==='jobs') { ba.classList.remove('hidden'); ba.onclick=()=>ModalForm.open(); document.getElementById('job-search').value=''; App.renderJobList(); }
+            else if (v==='calendar') { ba.classList.add('hidden'); if(!state.calendar) App.initCalendar(); requestAnimationFrame(()=>{ if(state.calendar){state.calendar.render();App.renderCalendar();} }); }
+        },
+        initCalendar: () => {
+            state.calendar=new FullCalendar.Calendar(document.getElementById('view-calendar'),{
+                initialView:'dayGridMonth', locale:'es', editable:true, height:'100%',
+                headerToolbar:{left:'prev,next today',center:'title',right:'dayGridMonth,timeGridWeek'},
+                eventDrop: info => {
+                    const parts=info.event.id.split('|'), nd=info.event.startStr, od=parts[2];
+                    if (parts[0]==='job') {
+                        const job=DB.getById(parts[1]);
+                        if (job) {
+                            if(!job.checklist) job.checklist=[]; if(!job.excludedDates) job.excludedDates=[];
+                            const idx=job.checklist.findIndex(p=>p.date===od);
+                            if (idx>-1) job.checklist[idx].date=nd;
+                            else { job.checklist.push({date:nd,completed:false,comment:"",dateCompleted:null}); if(!job.excludedDates.includes(od)) job.excludedDates.push(od); }
+                            job.checklist.sort((a,b)=>new Date(a.date)-new Date(b.date));
+                            DB.update(job,parts[1]).then(()=>{Toast.show('Fecha reprogramada','success');App.renderCalendar();});
                         }
-                    });
-                });
-                const percent = totalPeriods > 0 ? Math.round((completedPeriods / totalPeriods) * 100) : 0;
-                return {
-                    stats: { percent, completedPeriods, delayedPeriods, pendingPeriods, visits7, visits30, visitsYear },
-                    lists: { delayedItems, completedItems },
-                    chartData: monthlyData
-                };
-            },
-            renderSummary: () => {
-                const data = Dashboard.getFilteredData();
-                document.getElementById('stat-percent').innerText = data.stats.percent + '%';
-                document.getElementById('stat-completed').innerText = data.stats.completedPeriods;
-                document.getElementById('stat-delayed').innerText = data.stats.delayedPeriods;
-                document.getElementById('stat-pending').innerText = data.stats.pendingPeriods;
-                document.getElementById('stat-visits-7').innerText = data.stats.visits7;
-                document.getElementById('stat-visits-30').innerText = data.stats.visits30;
-                document.getElementById('stat-visits-year').innerText = data.stats.visitsYear;
-                Dashboard.updateChart(data.chartData);
-            },
-            updateChart: (monthlyData) => {
-                const ctx = document.getElementById('monthlyChart').getContext('2d');
-                if (state.chartInstance) state.chartInstance.destroy();
-                state.chartInstance = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
-                        datasets: [{ label: 'Trabajos Realizados', data: monthlyData, backgroundColor: '#2563eb', borderRadius: 4 }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false }, title: { display: true, text: 'Rendimiento Mensual (Año Actual)' } },
-                        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
                     }
-                });
-            },
-            showList: (type) => {
-                const data = Dashboard.getFilteredData();
-                const list = type === 'delayed' ? data.lists.delayedItems : data.lists.completedItems;
-                const container = document.getElementById('drilldown-list');
-                const title = document.getElementById('drilldown-title');
-                document.getElementById('dashboard-summary').classList.add('hidden');
-                document.getElementById('dashboard-drilldown').classList.remove('hidden');
-                container.innerHTML = '';
-                title.innerText = type === 'delayed' ? 'Trabajos Retrasados' : 'Trabajos Realizados';
-                if (list.length === 0) {
-                    container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:2rem; color:var(--secondary);">No hay registros.</div>';
-                    return;
-                }
-                list.forEach(item => {
-                    const card = document.createElement('div');
-                    const cardClass = type === 'delayed' ? 'delayed' : 'completed';
-                    const statusColor = type === 'delayed' ? 'var(--danger)' : 'var(--success)';
-                    const statusText = type === 'delayed' ? 'Retrasado' : 'Realizado';
-                    card.className = `job-card ${cardClass}`;
-                    card.innerHTML = `
-                        <div>
-                            <div class="job-title">${item.job.name}</div>
-                            <div class="job-info"><i class="fas fa-calendar-alt"></i> Fecha: ${item.period.date}</div>
-                            <div class="job-info"><i class="fas fa-map-marker-alt"></i> ${item.job.location || '-'}</div>
-                        </div>
-                        <div style="margin-top:10px; font-size:0.85rem; text-align:right;">
-                            <span style="font-weight:bold; color:${statusColor}">${statusText}</span>
-                            ${item.period.comment ? `<div style="margin-top:5px; font-style:italic; color:var(--secondary); text-align:left; background:#f8fafc; padding:5px; border-radius:4px;">"${item.period.comment}"</div>` : ''}
-                        </div>
-                    `;
-                    card.onclick = () => JobModal.open(item.job.id);
-                    container.appendChild(card);
-                });
-            },
-            showSummary: () => {
-                document.getElementById('dashboard-drilldown').classList.add('hidden');
-                document.getElementById('dashboard-summary').classList.remove('hidden');
-                Dashboard.renderSummary();
-            },
-            render: () => {
-                Dashboard.showSummary();
-                Dashboard.populateClientFilter();
-            }
-        };
-
-        const App = {
-            init: () => {
-                App.bindEvents();
-                Auth.check();
-            },
-            show: () => {
-                App.switchView('dashboard');
-            },
-            switchView: (viewName) => {
-                state.currentView = viewName;
-                document.getElementById('btn-view-dashboard').className = `btn ${viewName==='dashboard'?'btn-primary':'btn-secondary'}`;
-                document.getElementById('btn-view-jobs').className = `btn ${viewName==='jobs'?'btn-job':'btn-secondary'}`;
-                document.getElementById('btn-view-calendar').className = `btn ${viewName==='calendar'?'btn-primary':'btn-secondary'}`;
-                document.getElementById('view-dashboard').classList.add('hidden');
-                document.getElementById('view-jobs').classList.add('hidden');
-                document.getElementById('view-calendar').classList.add('hidden');
-                const btnAdd = document.getElementById('btn-add');
-                if (viewName === 'dashboard') {
-                    document.getElementById('view-dashboard').classList.remove('hidden');
-                    btnAdd.classList.add('hidden');
-                    Dashboard.render();
-                } else if (viewName === 'jobs') {
-                    document.getElementById('view-jobs').classList.remove('hidden');
-                    btnAdd.classList.remove('hidden');
-                    btnAdd.innerHTML = '<i class="fas fa-plus"></i> Trabajo';
-                    btnAdd.onclick = () => ModalForm.open();
-                    document.getElementById('job-search').value = '';
-                    App.renderJobList();
-                } else if (viewName === 'calendar') {
-                    document.getElementById('view-calendar').classList.remove('hidden');
-                    btnAdd.classList.add('hidden');
-                    if(!state.calendar) App.initCalendar();
-                    requestAnimationFrame(() => {
-                        if(state.calendar) { state.calendar.render(); App.renderCalendar(); }
-                    });
-                }
-            },
-            initCalendar: () => {
-                const calendarEl = document.getElementById('view-calendar');
-                state.calendar = new FullCalendar.Calendar(calendarEl, {
-                    initialView: 'dayGridMonth',
-                    locale: 'es',
-                    editable: true,
-                    headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
-                    eventDrop: (info) => {
-                        const parts = info.event.id.split('|');
-                        const newDate = info.event.startStr;
-                        const oldDate = parts[2];
-                        if (parts[0] === 'job') {
-                            const jobId = parts[1];
-                            const job = DB.getById(jobId);
-                            if (job) {
-                                if (!job.checklist) job.checklist = [];
-                                if (!job.excludedDates) job.excludedDates = [];
-                                const index = job.checklist.findIndex(p => p.date === oldDate);
-                                if (index > -1) {
-                                    job.checklist[index].date = newDate;
-                                } else {
-                                    job.checklist.push({ date: newDate, completed: false, comment: "", dateCompleted: null });
-                                    if (!job.excludedDates.includes(oldDate)) job.excludedDates.push(oldDate);
-                                }
-                                job.checklist.sort((a, b) => new Date(a.date) - new Date(b.date));
-                                DB.update(job, jobId).then(() => {
-                                    Toast.show('Fecha reprogramada', 'success');
-                                    App.renderCalendar();
-                                });
-                            }
+                },
+                eventClick: info => { const jobId=info.event.extendedProps.jobId||info.event.id.split('|')[1]; if(jobId) JobModal.open(jobId); }
+            });
+            state.calendar.render();
+        },
+        renderCalendar: () => {
+            if (!state.calendar) return;
+            const events=[];
+            state.jobs.forEach(j=>{
+                const periods=JL.generatePeriods(j), dur=parseInt(j.durationDays)||1;
+                periods.forEach(p=>{
+                    const bg=p.completed?'#1a9e6a':'#C0392B';
+                    if (dur<=1) {
+                        events.push({id:`job|${j.id}|${p.date}`,title:j.name,start:p.date,allDay:true,backgroundColor:bg,borderColor:bg,className:'fc-event-job'});
+                    } else {
+                        for (let d=0;d<dur;d++) {
+                            const day=new Date(p.date+'T00:00:00'); day.setDate(day.getDate()+d);
+                            const ds=day.toISOString().split('T')[0];
+                            const iF=d===0,iL=d===dur-1;
+                            let cls='fc-event-job fc-multiday-part'+(iF?' fc-multiday-first':iL?' fc-multiday-last':' fc-multiday-mid');
+                            events.push({id:`job|${j.id}|${p.date}|d${d}`,title:j.name,start:ds,allDay:true,backgroundColor:bg,borderColor:bg,className:cls,extendedProps:{jobId:j.id,originDate:p.date}});
                         }
-                    },
-                    eventClick: function(info) {
-                        const parts = info.event.id.split('|');
-                        if(parts[0] === 'job') JobModal.open(parts[1]);
                     }
                 });
-                state.calendar.render();
-            },
-            renderCalendar: () => {
-                if (!state.calendar) return;
-                const events = [];
-                state.jobs.forEach(j => {
-                    const periods = JobLogic.generatePeriods(j);
-                    periods.forEach(p => {
-                        events.push({
-                            id: `job|${j.id}|${p.date}`,
-                            title: j.name,
-                            start: p.date,
-                            backgroundColor: p.completed ? 'var(--success)' : 'var(--job-color)',
-                            borderColor: p.completed ? 'var(--success)' : 'var(--job-color)',
-                            className: 'fc-event-job'
-                        });
-                    });
-                });
-                state.calendar.removeAllEvents();
-                state.calendar.addEventSource(events);
-            },
-            bindEvents: () => {
-                document.getElementById('login-form').addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    Auth.login(document.getElementById('username').value, document.getElementById('password').value);
-                });
-                document.getElementById('btn-logout').addEventListener('click', Auth.logout);
-                document.getElementById('btn-view-dashboard').addEventListener('click', () => App.switchView('dashboard'));
-                document.getElementById('btn-view-jobs').addEventListener('click', () => App.switchView('jobs'));
-                document.getElementById('btn-view-calendar').addEventListener('click', () => App.switchView('calendar'));
-                document.querySelectorAll('.close-modal').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        document.querySelectorAll('.modal-overlay').forEach(el => el.classList.add('hidden'));
-                    });
-                });
-                document.getElementById('filter-client').addEventListener('change', Dashboard.renderSummary);
-                document.getElementById('filter-type').addEventListener('change', Dashboard.renderSummary);
-                document.getElementById('card-delayed').addEventListener('click', () => Dashboard.showList('delayed'));
-                document.getElementById('card-completed').addEventListener('click', () => Dashboard.showList('completed'));
-                document.getElementById('btn-back-dashboard').addEventListener('click', Dashboard.showSummary);
-                document.getElementById('job-search').addEventListener('input', (e) => App.renderJobList(e.target.value.toLowerCase()));
-                document.getElementById('btn-save-job').addEventListener('click', () => ModalForm.save());
-                document.querySelectorAll('#modal-job-details .tab-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        document.querySelectorAll('#modal-job-details .tab-btn').forEach(b => b.classList.remove('active'));
-                        document.querySelectorAll('#modal-job-details .tab-content').forEach(c => c.classList.add('hidden'));
-                        e.target.classList.add('active');
-                        document.getElementById(e.target.dataset.tab).classList.remove('hidden');
-                    });
-                });
-            },
-            renderJobList: (filterText = '') => {
-                const container = document.getElementById('job-list-container');
-                container.innerHTML = '';
-                const jobsToRender = state.jobs.filter(j => !filterText || j.name.toLowerCase().includes(filterText));
-                jobsToRender.forEach(j => {
-                    const periods = JobLogic.generatePeriods(j);
-                    const total = periods.length;
-                    const done = periods.filter(p => p.completed).length;
-                    const periodText = j.periodMonths == 0 ? "Visita Única" : `Cada: ${j.periodMonths} mes(es)`;
-                    const card = document.createElement('div');
-                    card.className = 'job-card';
-                    card.innerHTML = `
-                        <div>
-                            <div class="job-title">${j.name}</div>
-                            <div class="job-info"><i class="fas fa-map-marker-alt"></i> ${j.location || '-'}</div>
-                            <div class="job-info"><i class="fas fa-sync"></i> ${periodText}</div>
-                        </div>
-                        <div style="margin-top:10px; font-size:0.85rem;">
-                            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                                <span>Progreso: ${done}/${total}</span>
-                            </div>
-                            <div style="height:4px; background:#e2e8f0; border-radius:2px; overflow:hidden;">
-                                <div style="height:100%; background:var(--success); width:${total ? (done/total)*100 : 0}%"></div>
-                            </div>
-                        </div>
-                    `;
-                    card.onclick = () => JobModal.open(j.id);
-                    container.appendChild(card);
-                });
-                if (jobsToRender.length === 0) {
-                    container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:2rem; color:var(--secondary);">No se encontraron trabajos.</div>';
-                }
+            });
+            state.calendar.removeAllEvents(); state.calendar.addEventSource(events);
+        },
+        bindEvents: () => {
+            document.getElementById('login-form').addEventListener('submit',e=>{ e.preventDefault(); Auth.login(document.getElementById('username').value,document.getElementById('password').value); });
+            document.getElementById('btn-logout').addEventListener('click',Auth.logout);
+            ['dashboard','jobs','calendar'].forEach(v=>document.getElementById(`btn-view-${v}`).addEventListener('click',()=>App.switchView(v)));
+            document.querySelectorAll('.close-modal').forEach(b=>b.addEventListener('click',()=>document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.add('hidden'))));
+            document.getElementById('filter-client').addEventListener('change',Dashboard.renderSummary);
+            document.getElementById('filter-type').addEventListener('change',Dashboard.renderSummary);
+            document.getElementById('card-completed').addEventListener('click',()=>Dashboard.showList('completed'));
+            document.getElementById('card-delayed').addEventListener('click',()=>Dashboard.showList('delayed'));
+            document.getElementById('btn-back-dashboard').addEventListener('click',Dashboard.showSummary);
+            document.getElementById('job-search').addEventListener('input',e=>App.renderJobList(e.target.value.toLowerCase()));
+            document.getElementById('btn-save-job').addEventListener('click',()=>ModalForm.save());
+            document.querySelectorAll('#modal-job-details .tab-btn').forEach(btn=>btn.addEventListener('click',e=>{
+                document.querySelectorAll('#modal-job-details .tab-btn').forEach(b=>b.classList.remove('active'));
+                document.querySelectorAll('#modal-job-details .tab-content').forEach(c=>c.classList.add('hidden'));
+                e.target.classList.add('active'); document.getElementById(e.target.dataset.tab).classList.remove('hidden');
+            }));
+        },
+        renderJobList: (filter='') => {
+            const c=document.getElementById('job-list-container'); c.innerHTML='';
+            const filtered=state.jobs.filter(j=>!filter||j.name.toLowerCase().includes(filter));
+            document.getElementById('jobs-count-label').innerText=`${filtered.length} trabajo${filtered.length!==1?'s':''}`;
+            if (!filtered.length) { c.innerHTML='<div class="empty"><i class="fas fa-briefcase"></i><p>No se encontraron trabajos.</p></div>'; return; }
+            filtered.forEach(j=>{
+                const ps=JL.generatePeriods(j), tot=ps.length, done=ps.filter(p=>p.completed).length, pct=tot?Math.round(done/tot*100):0;
+                const isP=(parseInt(j.periodMonths)||0)>0, dur=parseInt(j.durationDays)||1;
+                const card=document.createElement('div'); card.className='job-card';
+                card.innerHTML=`<div><div class="jc-name">${j.name}</div><div class="jc-meta"><i class="fas fa-map-marker-alt"></i>${j.location||'—'}</div><div class="jc-meta" style="margin-top:.3rem;gap:.3rem"><span class="badge ${isP?'badge-amber':'badge-blue'}"><i class="fas ${isP?'fa-sync':'fa-flag-checkered'}"></i>${isP?`Cada ${j.periodMonths} mes(es)`:'Visita única'}</span>${dur>1?`<span class="badge badge-blue"><i class="fas fa-calendar-week"></i>${dur} días</span>`:''}</div></div><div><div class="jc-progress-wrap"><div class="jc-progress-fill" style="width:${pct}%"></div></div><div class="jc-progress-txt">${done}/${tot} completados · ${pct}%</div></div>`;
+                card.onclick=()=>JobModal.open(j.id);
+                c.appendChild(card);
+            });
+        }
+    };
+
+    /* MODAL FORM */
+    const ModalForm = {
+        open: (id=null) => {
+            document.getElementById('modal-form').classList.remove('hidden');
+            document.getElementById('job-form').reset();
+            document.getElementById('record-id').value=id||'';
+            document.getElementById('modal-title').innerText=id?'Editar Trabajo':'Nuevo Trabajo';
+            if (id) {
+                const d=DB.getById(id);
+                document.getElementById('j-name').value=d.name||'';
+                document.getElementById('j-contact').value=d.contact||'';
+                document.getElementById('j-phone').value=d.phone||'';
+                document.getElementById('j-scope').value=d.scope||'';
+                document.getElementById('j-location').value=d.location||'';
+                document.getElementById('j-additional').value=d.additional||'';
+                document.getElementById('j-start-date').value=d.startDate||'';
+                document.getElementById('j-period').value=d.periodMonths??1;
+                document.getElementById('j-duration').value=d.durationDays||1;
+            } else {
+                document.getElementById('j-start-date').value=new Date().toISOString().split('T')[0];
+                document.getElementById('j-period').value=1;
+                document.getElementById('j-duration').value=1;
             }
-        };
+        },
+        save: () => {
+            const id=document.getElementById('record-id').value, form=document.getElementById('job-form');
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+            const data={name:document.getElementById('j-name').value,contact:document.getElementById('j-contact').value,phone:document.getElementById('j-phone').value,scope:document.getElementById('j-scope').value,location:document.getElementById('j-location').value,additional:document.getElementById('j-additional').value,startDate:document.getElementById('j-start-date').value,periodMonths:parseInt(document.getElementById('j-period').value)||0,durationDays:parseInt(document.getElementById('j-duration').value)||1};
+            if (id) DB.update({...DB.getById(id),...data},id); else DB.add(data);
+            document.getElementById('modal-form').classList.add('hidden');
+        }
+    };
 
-        const ModalForm = {
-            open: (id = null) => {
-                const modal = document.getElementById('modal-form');
-                const form = document.getElementById('job-form');
-                modal.classList.remove('hidden');
-                form.reset();
-                document.getElementById('record-id').value = id || '';
-                document.getElementById('modal-title').innerText = id ? "Editar Trabajo" : "Nuevo Trabajo";
-                if (id) {
-                    const data = DB.getById(id);
-                    document.getElementById('j-name').value = data.name;
-                    document.getElementById('j-contact').value = data.contact;
-                    document.getElementById('j-phone').value = data.phone;
-                    document.getElementById('j-scope').value = data.scope;
-                    document.getElementById('j-location').value = data.location;
-                    document.getElementById('j-additional').value = data.additional;
-                    document.getElementById('j-start-date').value = data.startDate;
-                    document.getElementById('j-period').value = data.periodMonths;
-                } else {
-                    document.getElementById('j-start-date').value = new Date().toISOString().split('T')[0];
-                    document.getElementById('j-period').value = 1;
-                }
-            },
-            save: () => {
-                const id = document.getElementById('record-id').value;
-                const form = document.getElementById('job-form');
-                if (!form.checkValidity()) { form.reportValidity(); return; }
-                const data = {
-                    name: document.getElementById('j-name').value,
-                    contact: document.getElementById('j-contact').value,
-                    phone: document.getElementById('j-phone').value,
-                    scope: document.getElementById('j-scope').value,
-                    location: document.getElementById('j-location').value,
-                    additional: document.getElementById('j-additional').value,
-                    startDate: document.getElementById('j-start-date').value,
-                    periodMonths: parseInt(document.getElementById('j-period').value) || 0
-                };
-                if (id) {
-                    const existing = DB.getById(id);
-                    DB.update({ ...existing, ...data }, id);
-                } else {
-                    DB.add(data);
-                }
-                document.getElementById('modal-form').classList.add('hidden');
+    /* JOB MODAL */
+    const JobModal = {
+        open: id => {
+            const j=DB.getById(id); if(!j) return;
+            document.getElementById('modal-job-details').classList.remove('hidden');
+            document.getElementById('jd-client-name').innerText=j.name;
+            document.getElementById('jd-contact').innerText=j.contact||'—';
+            document.getElementById('jd-location').innerText=j.location||'—';
+            document.getElementById('jd-phone').innerText=j.phone||'—';
+            document.getElementById('jd-scope').innerText=j.scope||'Sin alcance definido.';
+            const addWrap=document.getElementById('jd-additional-wrap');
+            const addEl=document.getElementById('jd-additional');
+            if (j.additional && j.additional.trim()) {
+                addEl.innerText=j.additional;
+                addWrap.style.display='block';
+            } else {
+                addWrap.style.display='none';
             }
-        };
+            const isP=(parseInt(j.periodMonths)||0)>0, dur=parseInt(j.durationDays)||1;
+            document.getElementById('jd-badges').innerHTML=`<span class="badge ${isP?'badge-amber':'badge-blue'}"><i class="fas ${isP?'fa-sync':'fa-flag-checkered'}"></i>${isP?`Cada ${j.periodMonths} mes(es)`:'Visita única'}</span>${dur>1?`<span class="badge badge-blue"><i class="fas fa-calendar-week"></i>${dur} días</span>`:''}`;
+            document.getElementById('jd-period-label').innerText=(isP?`Periodo: ${j.periodMonths} mes(es)`:'Visita única')+(dur>1?` · Duración: ${dur} días`:'');
+            document.getElementById('jd-btn-edit').onclick=()=>{ document.getElementById('modal-job-details').classList.add('hidden'); ModalForm.open(id); };
+            document.getElementById('jd-btn-delete').onclick=()=>{ if(confirm('¿Eliminar este trabajo?')){ DB.delete(id); document.getElementById('modal-job-details').classList.add('hidden'); } };
+            JobModal.renderChecklist(j); JobModal.renderHistory(j);
+        },
+        renderChecklist: j => {
+            const wrap=document.getElementById('jd-checklist-wrapper'); wrap.innerHTML='';
+            const ps=JL.generatePeriods(j);
+            if (!ps.length) { wrap.innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--text-3);font-size:.82rem">Sin fechas programadas.</div>'; return; }
+            ps.forEach(p=>{
+                const item=document.createElement('div'); item.className=`check-item ${p.completed?'done':''}`;
+                item.innerHTML=`<div class="check-row"><input type="checkbox" class="check-box" ${p.completed?'checked':''}><span class="check-date">${p.date}</span><span class="check-badge ${p.completed?'done':'pending'}">${p.completed?'Realizado':'Pendiente'}</span></div>${p.completed?`<div class="comment-wrap"><input type="text" class="comment-input" placeholder="Agregar comentario..." value="${p.comment||''}" data-date="${p.date}"></div>`:''}`;
+                const cb=item.querySelector('.check-box'); cb.onchange=()=>JL.toggleCheck(j.id,p.date,cb.checked);
+                const ci=item.querySelector('.comment-input');
+                if (ci) { ci.onblur=()=>JL.saveComment(j.id,p.date,ci.value); ci.onkeypress=e=>{if(e.key==='Enter')ci.blur();}; }
+                wrap.appendChild(item);
+            });
+        },
+        renderHistory: j => {
+            const list=document.getElementById('jd-history-list'); list.innerHTML='';
+            if (!j.checklist||!j.checklist.filter(p=>p.completed).length) { list.innerHTML='<div style="text-align:center;padding:1rem;color:var(--text-3);font-size:.82rem">Sin visitas registradas aún.</div>'; return; }
+            j.checklist.filter(p=>p.completed).sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(p=>{
+                const item=document.createElement('div'); item.className='history-item';
+                item.innerHTML=`<div class="history-date">${p.date}</div><div class="history-comment">${p.comment||'Sin comentario'}</div>`;
+                list.appendChild(item);
+            });
+        }
+    };
 
-        const JobModal = {
-            currentId: null,
-            open: (id) => {
-                const j = DB.getById(id);
-                if(!j) return;
-                JobModal.currentId = id;
-                const modal = document.getElementById('modal-job-details');
-                modal.classList.remove('hidden');
-                document.getElementById('jd-client-name').innerText = j.name;
-                document.getElementById('jd-contact').innerText = j.contact || 'Sin contacto';
-                document.getElementById('jd-location').innerText = j.location || '-';
-                document.getElementById('jd-phone').innerText = j.phone || '-';
-                document.getElementById('jd-scope').innerText = j.scope || 'Sin alcance definido';
-                const periodLabel = document.getElementById('jd-period-label');
-                periodLabel.innerText = j.periodMonths == 0 ? "Visita Única" : `Periodo: ${j.periodMonths} mes(es)`;
-                document.getElementById('jd-btn-edit').onclick = () => {
-                    modal.classList.add('hidden');
-                    ModalForm.open(id);
-                };
-                document.getElementById('jd-btn-delete').onclick = () => {
-                    if(confirm('¿Eliminar trabajo?')) { DB.delete(id); modal.classList.add('hidden'); }
-                };
-                JobModal.renderChecklist(j);
-                JobModal.renderHistory(j);
-            },
-            renderChecklist: (j) => {
-                const wrapper = document.getElementById('jd-checklist-wrapper');
-                wrapper.innerHTML = '';
-                const periods = JobLogic.generatePeriods(j);
-                if(!periods.length) {
-                    wrapper.innerHTML = '<div style="padding:1rem; text-align:center; color:var(--secondary);">Sin fechas.</div>';
-                    return;
-                }
-                periods.forEach(p => {
-                    const item = document.createElement('div');
-                    item.className = `checklist-item ${p.completed ? 'done' : ''}`;
-                    let html = `
-                        <div class="check-row">
-                            <input type="checkbox" class="check-box" ${p.completed ? 'checked' : ''}>
-                            <span class="check-date">${p.date}</span>
-                            <span class="check-status ${p.completed ? 'done' : ''}">${p.completed ? 'Realizado' : 'Pendiente'}</span>
-                        </div>
-                    `;
-                    if(p.completed) {
-                        html += `<div class="check-comment-box"><input type="text" class="comment-input" placeholder="Comentario..." value="${p.comment || ''}" data-date="${p.date}"></div>`;
-                    }
-                    item.innerHTML = html;
-                    const checkbox = item.querySelector('.check-box');
-                    checkbox.onchange = () => JobLogic.toggleCheck(j.id, p.date, checkbox.checked);
-                    const inputComment = item.querySelector('.comment-input');
-                    if(inputComment) {
-                        inputComment.onblur = () => JobLogic.saveComment(j.id, p.date, inputComment.value);
-                        inputComment.onkeypress = (e) => { if(e.key === 'Enter') inputComment.blur(); };
-                    }
-                    wrapper.appendChild(item);
-                });
-            },
-            renderHistory: (j) => {
-                const list = document.getElementById('jd-history-list');
-                list.innerHTML = '';
-                if(j.checklist) {
-                    const doneList = j.checklist.filter(p => p.completed).sort((a,b) => new Date(b.date) - new Date(a.date));
-                    doneList.forEach(p => {
-                        const item = document.createElement('div');
-                        item.className = 'history-item-job';
-                        item.innerHTML = `<div><strong>Fecha: ${p.date}</strong> <span style="color:var(--success); font-size:0.8rem;">(Hecho)</span></div><div class="history-comment">${p.comment || '-'}</div>`;
-                        list.appendChild(item);
-                    });
-                    if(doneList.length === 0) list.innerHTML = '<div style="padding:1rem; color:var(--secondary); text-align:center;">Sin historial.</div>';
-                }
-            }
-        };
+    /* TOAST */
+    const Toast = {
+        show: (msg,type='info') => {
+            const c=document.getElementById('toast-container'), t=document.createElement('div');
+            const cls={success:'ts',warning:'tw',info:'ti'};
+            const ico={success:'fa-check-circle',warning:'fa-exclamation-triangle',info:'fa-info-circle'};
+            t.className=`toast ${cls[type]||'ti'}`;
+            t.innerHTML=`<i class="fas ${ico[type]||'fa-info-circle'}"></i><span>${msg}</span>`;
+            c.appendChild(t);
+            setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300);},3000);
+        }
+    };
 
-        const Toast = {
-            show: (msg, type = 'info') => {
-                const container = document.getElementById('toast-container');
-                const toast = document.createElement('div');
-                toast.className = 'toast';
-                let icon = '<i class="fas fa-info-circle"></i>';
-                if(type === 'success') icon = '<i class="fas fa-check-circle text-success"></i>';
-                if(type === 'warning') icon = '<i class="fas fa-exclamation-triangle text-warning"></i>';
-                toast.innerHTML = `${icon} <span>${msg}</span>`;
-                container.appendChild(toast);
-                setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
-            }
-        };
-
-        document.addEventListener('DOMContentLoaded', App.init);
-    </script>
-
-    <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js')
-          .then(() => console.log('Service Worker Registrado'))
-          .catch(err => console.log('Error SW:', err));
-      }
-    </script>
+    document.addEventListener('DOMContentLoaded', App.init);
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+</script>
 </body>
 </html>
