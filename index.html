@@ -1,1118 +1,961 @@
-// Load OT management table
-window.loadOTTable = async () => {
-    otData = [];
-    const snap = await getDocs(collection(db, 'workOrders'));
-    otData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    otData.sort((a, b) => a.number.localeCompare(b.number));
-    const tbody = document.getElementById('ot-table-body');
-    let html = '';
-    otData.forEach(ot => {
-        html += `<tr>
-            <td style="font-weight:700;color:var(--navy-800)">${ot.number}</td>
-            <td>${ot.client}</td>
-            <td style="color:var(--text-2)">${ot.description}</td>
-            <td style="color:var(--text-3);font-size:.78rem">${fmtDate(ot.createdAt?.split('T')[0]||'')}</td>
-            <td class="actions-cell">
-                <button type="button" class="btn btn-sm btn-warning" onclick="window.editOT('${ot.id}')">Editar</button>
-                <button type="button" class="btn btn-sm btn-danger" onclick="window.deleteOT('${ot.id}')">Eliminar</button>
-            </td>
-        </tr>`;
-    });
-    tbody.innerHTML = html || `<tr><td colspan="5"><div class="empty-state"><div class="icon">📋</div><p>Sin órdenes de trabajo</p></div></td></tr>`;
-};
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiequipos — Gestión de Mantenimiento</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta name="theme-color" content="#f0f2f5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="./logo.png">
+    <style>
+    :root {
+        /* Primary: Red */
+        --blue:       #C0392B;
+        --blue-light: #E8341D;
+        --blue-dim:   rgba(192,57,43,0.10);
+        --blue-glow:  rgba(192,57,43,0.22);
+        /* Danger/alerts still red */
+        --red:        #C0392B;
+        --red-dim:    rgba(192,57,43,0.10);
+        --red-glow:   rgba(192,57,43,0.22);
+        /* Success: kept green */
+        --green:      #1a9e6a;
+        --green-dim:  rgba(26,158,106,0.12);
+        /* Amber replaced with grey-blue neutral */
+        --amber:      #5a6a7e;
+        --amber-dim:  rgba(90,106,126,0.12);
+        /* Light mode backgrounds */
+        --bg-base:    #f0f2f5;
+        --bg-panel:   #ffffff;
+        --bg-card:    #f7f8fa;
+        --bg-hover:   #eef0f4;
+        --bg-input:   #ffffff;
+        --border:     rgba(0,0,0,0.08);
+        --border-med: rgba(0,0,0,0.14);
+        /* Light mode text */
+        --text-1:     #1a2030;
+        --text-2:     #5a6a7e;
+        --text-3:     #9aa3b0;
+        --sidebar-w:  68px;
+        --font-d: 'Outfit', sans-serif;
+        --font-b: 'Outfit', sans-serif;
+        --font-m: 'IBM Plex Mono', monospace;
+        --r-sm: 6px; --r-md: 10px; --r-lg: 16px;
+        --sh-sm: 0 2px 8px rgba(0,0,0,.08);
+        --sh-md: 0 8px 24px rgba(0,0,0,.10);
+        --sh-lg: 0 20px 60px rgba(0,0,0,.15);
+        --t: .18s cubic-bezier(.4,0,.2,1);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:var(--font-b);background:var(--bg-base);color:var(--text-1);height:100vh;overflow:hidden;font-size:14px;-webkit-font-smoothing:antialiased;font-weight:400}
+    .hidden{display:none!important}
+    ::-webkit-scrollbar{width:4px;height:4px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:var(--border-med);border-radius:2px}
 
-// Create / Edit OT form
-document.getElementById('ot-form').addEventListener('submit', async e => {
-    e.preventDefault();
-    const id    = document.getElementById('ot-edit-id').value;
-    const number = document.getElementById('ot-number').value.trim();
-    const client = document.getElementById('ot-client').value.trim();
-    const desc   = document.getElementById('ot-description').value.trim();
-    if (!number || !client || !desc) return;
-    try {
-        if (id) {
-            await updateDoc(doc(db, 'workOrders', id), { number, client, description: desc });
-            showToast('OT actualizada', 'success');
-        } else {
-            await addDoc(collection(db, 'workOrders'), { number, client, description: desc, createdAt: new Date().toISOString() });
-            showToast('OT creada exitosamente', 'success');
-        }
-        e.target.reset();
-        document.getElementById('ot-edit-id').value = '';
-        document.getElementById('ot-submit-btn').textContent = '+ Crear OT';
-        document.getElementById('ot-cancel-btn').classList.add('hidden');
-        otData = []; // reset cache
-        await window.loadOTTable();
-    } catch(err) { showToast('Error: ' + err.message, 'error'); }
-});
+    /* ── LOGIN ── */
+    #login-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f0f2f5 0%,#e8ebf0 100%);z-index:9999;overflow:hidden}
+    #login-screen::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 15% 15%,rgba(192,57,43,.12) 0%,transparent 65%),radial-gradient(ellipse 50% 50% at 85% 80%,rgba(90,106,126,.08) 0%,transparent 60%);animation:lgPulse 10s ease-in-out infinite alternate}
+    #login-screen::after{content:'';position:absolute;inset:0;background-image:repeating-linear-gradient(-45deg,transparent,transparent 40px,rgba(255,255,255,.012) 40px,rgba(255,255,255,.012) 41px);pointer-events:none}
+    @keyframes lgPulse{0%{opacity:.6}100%{opacity:1}}
+    .login-card{position:relative;z-index:2;width:min(460px,92vw);background:var(--bg-panel);border:1px solid var(--border-med);border-radius:var(--r-lg);overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.14),0 0 0 1px rgba(0,0,0,.06);animation:lgUp .6s cubic-bezier(.16,1,.3,1) both}
+    @keyframes lgUp{from{opacity:0;transform:translateY(28px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+    .login-bar{height:4px;background:linear-gradient(90deg,var(--red),#5a6a7e)}
+    .login-body{padding:2.5rem 2.5rem 2rem}
+    .login-logo-row{display:flex;align-items:center;gap:.875rem;margin-bottom:2rem}
+    .login-icon{width:44px;height:44px;background:var(--red-dim);border:1px solid var(--red-glow);border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:var(--red)}
+    .login-brand .name{font-family:var(--font-d);font-size:1.2rem;font-weight:700;color:var(--text-1);letter-spacing:-.3px}
+    .login-brand .tag{font-family:var(--font-m);font-size:.65rem;color:var(--text-3);text-transform:uppercase;letter-spacing:1.5px;margin-top:1px}
+    .login-h{font-family:var(--font-d);font-size:1.6rem;font-weight:700;color:var(--text-1);margin-bottom:.3rem;letter-spacing:-.3px}
+    .login-sub{font-size:.82rem;color:var(--text-2);margin-bottom:1.75rem;font-weight:400}
+    .lf-g{margin-bottom:1.1rem}
+    .lf-label{display:block;font-size:.7rem;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:1px;margin-bottom:.45rem}
+    .lf-wrap{position:relative}
+    .lf-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-3);font-size:.8rem;pointer-events:none;transition:color var(--t)}
+    .lf-input{width:100%;padding:.8rem .8rem .8rem 2.4rem;background:#f7f8fa;border:1px solid var(--border-med);border-radius:var(--r-sm);color:var(--text-1);font-family:var(--font-b);font-size:.9rem;transition:all var(--t);-webkit-appearance:none}
+    .lf-input::placeholder{color:var(--text-3)}    .lf-label{color:var(--text-2)!important}
+    .lf-input:focus{outline:none;border-color:rgba(192,57,43,.5);background:rgba(192,57,43,.04);box-shadow:0 0 0 3px rgba(192,57,43,.1)}
+    .btn-login{width:100%;padding:.85rem;background:var(--red);border:none;border-radius:var(--r-sm);color:#fff;font-family:var(--font-d);font-size:.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.5rem;margin-top:1.5rem;transition:all var(--t);box-shadow:0 4px 16px rgba(192,57,43,.35);letter-spacing:.3px}
+    .btn-login:hover{background:var(--blue-light);transform:translateY(-1px);box-shadow:0 6px 24px rgba(192,57,43,.5)}
+    #login-error{margin-top:1rem;padding:.65rem .875rem;background:var(--red-dim);border:1px solid var(--red-glow);border-radius:var(--r-sm);color:#ff8a78;font-size:.82rem;display:flex;align-items:center;gap:.5rem}
 
-window.editOT = (id) => {
-    const ot = otData.find(x => x.id === id);
-    if (!ot) return;
-    document.getElementById('ot-edit-id').value = id;
-    document.getElementById('ot-number').value = ot.number;
-    document.getElementById('ot-client').value = ot.client;
-    document.getElementById('ot-description').value = ot.description;
-    document.getElementById('ot-submit-btn').textContent = '✓ Guardar Cambios';
-    document.getElementById('ot-cancel-btn').classList.remove('hidden');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-};
+    /* ── APP SHELL ── */
+    #app-container{display:flex;height:100vh;overflow:hidden}
 
-window.cancelOTEdit = () => {
-    document.getElementById('ot-form').reset();
-    document.getElementById('ot-edit-id').value = '';
-    document.getElementById('ot-submit-btn').textContent = '+ Crear OT';
-    document.getElementById('ot-cancel-btn').classList.add('hidden');
-};
+    /* ── SIDEBAR ── */
+    #sidebar{width:var(--sidebar-w);background:#2c3442;border-right:none;display:flex;flex-direction:column;align-items:center;padding:1rem 0;gap:.25rem;flex-shrink:0;z-index:10}
+    .sb-logo{width:40px;height:40px;background:rgba(192,57,43,.25);border:1px solid rgba(192,57,43,.4);border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;font-size:1rem;color:#ff8570;margin-bottom:1.25rem;flex-shrink:0}
+    .sb-nav{display:flex;flex-direction:column;gap:.25rem;width:100%;padding:0 .5rem}
+    .nav-btn{width:100%;height:44px;background:none;border:1px solid transparent;border-radius:var(--r-sm);color:rgba(255,255,255,.4);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--t);position:relative}
+    .nav-btn:hover{background:rgba(255,255,255,.08);color:rgba(255,255,255,.75);border-color:rgba(255,255,255,.1)}
+    .nav-btn.active{background:rgba(192,57,43,.3);border-color:rgba(192,57,43,.5);color:#ff8570}
+    .nav-tip{position:absolute;left:calc(100% + 10px);background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-sm);padding:.3rem .65rem;font-size:.75rem;font-family:var(--font-b);color:var(--text-1);white-space:nowrap;opacity:0;pointer-events:none;transition:opacity var(--t);z-index:100;box-shadow:var(--sh-sm)}
+    .nav-btn:hover .nav-tip{opacity:1}
+    .sb-spacer{flex:1}
+    .sb-bottom{width:100%;padding:0 .5rem;display:flex;flex-direction:column;gap:.25rem}
+    .sb-divider{width:32px;height:1px;background:rgba(255,255,255,.12);margin:.5rem auto}
 
-window.deleteOT = async (id) => {
-    // Check if any expense uses this OT
-    const used = (await getDocs(collection(db, 'records'))).docs
-        .some(d => d.data().otId === id);
-    if (used) { showToast('No se puede eliminar: tiene gastos asociados.', 'error'); return; }
-    if (!confirm('¿Eliminar esta orden de trabajo?')) return;
-    await deleteDoc(doc(db, 'workOrders', id));
-    otData = [];
-    showToast('OT eliminada', 'success');
-    window.loadOTTable();
-};
+    /* ── MAIN ── */
+    #main-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
 
-/* ══════════════════════════════════════════
-   ANALISIS DE COSTOS
-══════════════════════════════════════════ */
+    /* ── TOPBAR ── */
+    #topbar{height:56px;background:var(--bg-panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1.25rem;gap:1rem;flex-shrink:0;box-shadow:0 1px 0 rgba(0,0,0,.06)}
+    .topbar-title{font-family:var(--font-d);font-size:1rem;font-weight:800;color:var(--text-1);letter-spacing:-.2px;flex:1}
+    .topbar-title span{color:var(--red)}
 
-const EXPENSE_TYPES = ['Materiales','Insumos','Herramientas','Repuestos','Combustible','Viaticos','Hospedaje','Parqueo','Peajes','Otros'];
-const CAT_COLORS    = ['#1B2A4A','#0f766e','#c0272d','#7c3aed','#2563eb','#0891b2','#1d7a4f','#9333ea','#d97706','#6b7280'];
-const CAT_ICONS     = ['📦','🧴','🛠️','🔧','⛽','🚗','🏨','🅿️','🛣️','📋'];
-let costCharts = {};
+    /* ── BUTTONS ── */
+    .btn{display:inline-flex;align-items:center;gap:.4rem;padding:.45rem .9rem;border-radius:var(--r-sm);border:1px solid transparent;font-family:var(--font-b);font-size:.82rem;font-weight:500;cursor:pointer;transition:all var(--t);white-space:nowrap}
+    .btn-primary{background:var(--red);color:#fff;border-color:var(--red);box-shadow:0 2px 8px rgba(192,57,43,.3)}
+    .btn-primary:hover{background:var(--blue-light);box-shadow:0 4px 16px rgba(192,57,43,.45)}
+    .btn-ghost{background:transparent;color:var(--text-2);border-color:var(--border-med)}
+    .btn-ghost:hover{background:#eef0f4;color:var(--text-1);border-color:var(--border-med)}
+    .btn-danger{background:var(--red-dim);color:#ff8a78;border-color:var(--red-glow)}
+    .btn-danger:hover{background:var(--red);color:#fff;border-color:var(--red)}
+    .btn-sm{padding:.3rem .6rem;font-size:.75rem}
+    .btn-icon{padding:.45rem;width:34px;height:34px;justify-content:center}
 
-function destroyCostChart(id) {
-    if (costCharts[id]) { costCharts[id].destroy(); delete costCharts[id]; }
-}
+    /* ── VIEW AREA ── */
+    #view-area{flex:1;overflow:hidden;position:relative}
+    .view-pane{position:absolute;inset:0;overflow-y:auto;padding:1.5rem;animation:vFade .22s ease both;background:var(--bg-base)}
+    .view-pane.hidden{display:none!important}
+    @keyframes vFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    #view-calendar{position:absolute;inset:0;background:#f0f2f5}
 
-window.loadCostAnalysis = async () => {
-    await populateCostOTFilter();
-    const otFilter   = document.getElementById('cost-filter-ot').value;
-    const techFilter = document.getElementById('cost-filter-tech').value;
-    const fromDate   = document.getElementById('cost-filter-from').value;
-    const toDate     = document.getElementById('cost-filter-to').value;
+    /* ── PAGE HEADER ── */
+    .page-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:.75rem}
+    .ph-left{display:flex;flex-direction:column;gap:2px}
+    .page-title{font-family:var(--font-d);font-size:1.4rem;font-weight:800;color:var(--text-1);letter-spacing:-.4px}
+    .page-sub{font-size:.78rem;color:var(--text-2);font-family:var(--font-m)}
 
-    const allExp = (await getDocs(collection(db, 'records'))).docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        .filter(r => {
-            if (r.type !== 'expense') return false;
-            if (techFilter !== 'all' && r.userId !== techFilter) return false;
-            if (fromDate && r.date < fromDate) return false;
-            if (toDate && r.date > toDate) return false;
-            if (otFilter === 'all') return true;
-            return r.otId === otFilter;
-        });
+    /* ── SEARCH ── */
+    .search-wrap{position:relative;flex:1;min-width:180px;max-width:320px}
+    .search-wrap .si{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-3);font-size:.8rem;pointer-events:none}
+    .search-input{width:100%;padding:.5rem .75rem .5rem 2.1rem;background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-sm);color:var(--text-1);font-family:var(--font-b);font-size:.82rem;transition:all var(--t)}
+    .search-input::placeholder{color:var(--text-3)}
+    .search-input:focus{outline:none;border-color:var(--red-glow);box-shadow:0 0 0 3px rgba(192,57,43,.08)}
 
-    const hasData = allExp.length > 0;
-    document.getElementById('cost-empty').classList.toggle('hidden', hasData);
+    /* ── STAT CARDS ── */
+    .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.875rem;margin-bottom:1.25rem}
+    .stat-card{background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-md);padding:1.25rem 1.25rem 1rem;position:relative;overflow:hidden;transition:border-color var(--t),transform var(--t);box-shadow:var(--sh-sm)}
+    .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+    .stat-card.blue::before{background:var(--blue)}
+    .stat-card.green::before{background:var(--green)}
+    .stat-card.red::before{background:var(--red)}
+    .stat-card.amber::before{background:var(--amber)}
+    .stat-card.clickable{cursor:pointer}
+    .stat-card.clickable:hover{border-color:var(--border-med);transform:translateY(-2px);box-shadow:var(--sh-sm)}
+    .stat-icon{width:32px;height:32px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:.85rem;margin-bottom:.875rem}
+    .stat-card.blue  .stat-icon{background:var(--blue-dim);color:var(--blue-light)}
+    .stat-card.green .stat-icon{background:var(--green-dim);color:var(--green)}
+    .stat-card.red   .stat-icon{background:var(--red-dim);color:#ff8a78}
+    .stat-card.amber .stat-icon{background:rgba(90,106,126,.12);color:#5a6a7e}
+    .stat-value{font-family:var(--font-d);font-size:2rem;font-weight:800;line-height:1;margin-bottom:.3rem;letter-spacing:-1px}
+    .stat-card.blue  .stat-value{color:var(--blue-light)}
+    .stat-card.green .stat-value{color:var(--green)}
+    .stat-card.red   .stat-value{color:#ff8a78}
+    .stat-card.amber .stat-value{color:#4a5568}
+    .stat-label{font-size:.72rem;color:var(--text-2);text-transform:uppercase;letter-spacing:.8px;font-weight:500}
+    .stat-hint{font-size:.68rem;color:var(--text-3);margin-top:.4rem;font-family:var(--font-m)}
 
-    // ── KPIs ──────────────────────────────────────────────
-    const totalCost = allExp.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
-    const uniqueOTs = new Set(allExp.map(r => r.otId).filter(Boolean)).size;
-    const avgPerOT  = uniqueOTs > 0 ? totalCost / uniqueOTs : 0;
-    const catTotals = {};
-    EXPENSE_TYPES.forEach(c => catTotals[c] = 0);
-    allExp.forEach(r => { const c = r.expenseType || 'Otros'; catTotals[c] = (catTotals[c]||0) + parseFloat(r.amount||0); });
-    const topCat = Object.entries(catTotals).sort((a,b) => b[1]-a[1])[0];
+    /* ── PANELS ── */
+    .panel{background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-md);overflow:hidden;margin-bottom:1.25rem;box-shadow:var(--sh-sm)}
+    .panel-hdr{padding:.875rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:.75rem}
+    .panel-title{font-family:var(--font-d);font-size:.85rem;font-weight:700;color:var(--text-1);letter-spacing:-.2px}
+    .panel-body{padding:1.25rem}
 
-    document.getElementById('cost-kpi-total').textContent   = fmtCLP(totalCost);
-    document.getElementById('cost-kpi-ots').textContent     = uniqueOTs;
-    document.getElementById('cost-kpi-avg').textContent     = fmtCLP(avgPerOT);
-    document.getElementById('cost-kpi-top-cat').textContent = topCat && topCat[1] > 0 ? topCat[0] : '—';
+    /* ── FILTERS ── */
+    .filters-row{display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1.25rem}
+    .fg{display:flex;flex-direction:column;gap:.3rem;flex:1;min-width:140px}
+    .fg-label{font-size:.68rem;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.8px}
+    .fg-select{padding:.5rem .75rem;background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-sm);color:var(--text-1);font-family:var(--font-b);font-size:.82rem;cursor:pointer;transition:all var(--t);-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a6a7e'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:2rem}
+    .fg-select:focus{outline:none;border-color:var(--red-glow);box-shadow:0 0 0 3px rgba(192,57,43,.08)}
 
-    // ── Resumen global por categoria (chips) ──────────────
-    const summaryEl = document.getElementById('cost-cat-summary');
-    summaryEl.innerHTML = EXPENSE_TYPES.map((cat, i) => {
-        const amt = catTotals[cat] || 0;
-        const pct = totalCost > 0 ? ((amt / totalCost) * 100).toFixed(1) : '0.0';
-        return `<div class="cat-chip">
-            <div class="cat-chip-label" style="display:flex;align-items:center;gap:.35rem">
-                <span>${CAT_ICONS[i]}</span>${cat}
+    /* ── PERIOD TABLE ── */
+    .ptable{width:100%;border-collapse:collapse}
+    .ptable tr{border-bottom:1px solid var(--border)}
+    .ptable tr:last-child{border-bottom:none}
+    .ptable td{padding:.75rem 0;font-size:.82rem}
+    .ptable td:first-child{color:var(--text-2)}
+    .ptable td:last-child{text-align:right;font-family:var(--font-m);font-weight:500;color:var(--text-1);font-size:.9rem}
+
+    /* ── CHART ── */
+    .chart-wrap{position:relative;height:240px}
+
+    /* ── JOB GRID ── */
+    .job-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.875rem}
+    .job-card{background:#ffffff;border:1px solid var(--border-med);border-left:3px solid var(--red);border-radius:var(--r-md);padding:1.1rem 1.1rem .9rem;cursor:pointer;transition:all var(--t);display:flex;flex-direction:column;gap:.75rem;box-shadow:var(--sh-sm)}
+    .job-card:hover{border-color:rgba(192,57,43,.3);border-left-color:var(--red);background:#fafbfc;transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.1)}
+    .job-card.delayed{border-left-color:var(--red)}
+    .job-card.completed{border-left-color:var(--green)}
+    .jc-name{font-family:var(--font-d);font-size:.95rem;font-weight:700;color:var(--text-1);letter-spacing:-.2px;margin-bottom:.25rem}
+    .jc-meta{display:flex;align-items:center;gap:.4rem;font-size:.75rem;color:var(--text-2);margin-bottom:.15rem}
+    .jc-meta i{color:var(--text-3);width:12px;text-align:center}
+    .jc-progress-wrap{background:var(--bg-base);border-radius:3px;height:3px;overflow:hidden;margin-top:.2rem}
+    .jc-progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--blue-light));border-radius:3px;transition:width .5s ease}
+    .jc-progress-txt{font-family:var(--font-m);font-size:.68rem;color:var(--text-3);text-align:right;margin-top:.3rem}
+    .badge{display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .5rem;border-radius:4px;font-size:.68rem;font-weight:600;font-family:var(--font-m)}
+    .badge-blue{background:var(--blue-dim);color:var(--blue-light)}
+    .badge-amber{background:rgba(90,106,126,.12);color:#5a6a7e}
+    .badge-green{background:var(--green-dim);color:var(--green)}
+    .badge-red{background:var(--red-dim);color:#ff8a78}
+
+    /* ── DRILLDOWN ── */
+    .dd-hdr{display:flex;align-items:center;gap:.875rem;margin-bottom:1.25rem;flex-wrap:wrap}
+    .dd-title{font-family:var(--font-d);font-size:1.1rem;font-weight:800;color:var(--text-1)}
+
+    /* ── CALENDAR ── */
+    #view-calendar .fc{height:100%!important;font-family:var(--font-b)!important}
+    #view-calendar .fc-toolbar{padding:.875rem 1.25rem;background:#ffffff;border-bottom:1px solid var(--border);margin-bottom:0!important}
+    #view-calendar .fc-toolbar-title{font-family:var(--font-d)!important;font-size:1rem!important;font-weight:800!important;color:var(--text-1)!important}
+    #view-calendar .fc-button{background:#ffffff!important;border:1px solid var(--border-med)!important;color:var(--text-2)!important;font-family:var(--font-b)!important;font-size:.78rem!important;padding:.35rem .75rem!important;box-shadow:none!important;border-radius:var(--r-sm)!important;transition:all var(--t)!important}
+    #view-calendar .fc-button:hover{background:#f0f2f5!important;border-color:var(--border-med)!important;color:var(--text-1)!important}
+    #view-calendar .fc-button-primary:not(:disabled).fc-button-active{background:var(--red-dim)!important;border-color:var(--red-glow)!important;color:var(--red)!important}
+    #view-calendar .fc-daygrid-day{background:#ffffff;border-color:var(--border)!important}
+    #view-calendar .fc-col-header-cell{background:#f0f2f5;border-color:var(--border)!important}
+    #view-calendar .fc-col-header-cell-cushion{font-size:.72rem!important;font-weight:600!important;text-transform:uppercase;letter-spacing:.8px;color:var(--text-2)!important;padding:.5rem!important}
+    #view-calendar .fc-daygrid-day-number{font-size:.78rem!important;color:var(--text-1)!important;font-family:var(--font-m)!important;padding:.35rem!important}
+    #view-calendar .fc-day-today{background:rgba(192,57,43,.05)!important}
+    #view-calendar .fc-day-today .fc-daygrid-day-number{color:var(--red)!important;font-weight:600!important}
+    .fc-event-job{font-size:.72rem!important;font-weight:500!important;font-family:var(--font-b)!important;border-radius:3px!important;cursor:pointer!important;padding:1px 4px!important}
+    .fc-multiday-part{border-radius:0!important;margin:0!important}
+    .fc-multiday-first{border-radius:3px 0 0 3px!important}
+    .fc-multiday-last{border-radius:0 3px 3px 0!important}
+    .fc-multiday-mid{border-left:none!important;border-right:none!important}
+
+    /* ── MODAL ── */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:800;padding:1rem;backdrop-filter:blur(4px);animation:mBgIn .2s ease both}
+    @keyframes mBgIn{from{opacity:0}to{opacity:1}}
+    .modal{background:var(--bg-panel);border:1px solid var(--border-med);border-radius:var(--r-lg);width:100%;max-width:580px;max-height:90vh;display:flex;flex-direction:column;box-shadow:var(--sh-lg);animation:mIn .25s cubic-bezier(.16,1,.3,1) both;overflow:hidden}
+    @keyframes mIn{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+    .modal-bar{height:3px;background:linear-gradient(90deg,var(--red),#5a6a7e);flex-shrink:0}
+    .modal-hdr{padding:1.1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+    .modal-hdr-title{font-family:var(--font-d);font-size:1rem;font-weight:800;color:var(--text-1);letter-spacing:-.3px}
+    .modal-body{padding:1.25rem;overflow-y:auto;flex:1}
+    .modal-footer{padding:.875rem 1.25rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:.5rem;flex-shrink:0;background:#f7f8fa}
+
+    /* ── FORM ── */
+    .form-group{margin-bottom:1rem}
+    .form-label{display:block;font-size:.7rem;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.4rem}
+    .form-control{width:100%;padding:.65rem .875rem;background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-sm);color:var(--text-1);font-family:var(--font-b);font-size:.875rem;transition:all var(--t);-webkit-appearance:none}
+    .form-control::placeholder{color:var(--text-3)}
+    .form-control:focus{outline:none;border-color:rgba(192,57,43,.45);box-shadow:0 0 0 3px rgba(192,57,43,.08);background:rgba(192,57,43,.02)}
+    textarea.form-control{resize:vertical;min-height:80px;line-height:1.5}
+    select.form-control{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7a99'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:2rem}
+    .form-row{display:grid;gap:.875rem}
+    .cols-2{grid-template-columns:1fr 1fr}
+    .cols-3{grid-template-columns:1fr 1fr 1fr}
+    .form-section{font-size:.68rem;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin:1.25rem 0 .75rem;padding-bottom:.4rem;border-bottom:1px solid var(--border)}
+
+    /* ── TABS ── */
+    .tabs{display:flex;gap:.1rem;background:#eef0f4;border-radius:var(--r-sm);padding:3px;margin-bottom:1.1rem}
+    .tab-btn{flex:1;padding:.45rem .75rem;background:none;border:none;border-radius:4px;cursor:pointer;font-family:var(--font-b);font-size:.78rem;font-weight:500;color:var(--text-3);transition:all var(--t)}
+    .tab-btn.active{background:var(--bg-card);color:var(--text-1);box-shadow:var(--sh-sm)}
+
+    /* ── CHECKLIST ── */
+    .checklist-wrap{display:flex;flex-direction:column;gap:.4rem}
+    .check-item{background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-sm);padding:.75rem .875rem;transition:background var(--t),border-color var(--t)}
+    .check-item.done{background:rgba(29,184,122,.05);border-color:rgba(29,184,122,.2)}
+    .check-row{display:flex;align-items:center;gap:.75rem}
+    .check-box{width:16px;height:16px;accent-color:var(--green);cursor:pointer;flex-shrink:0}
+    .check-date{font-family:var(--font-m);font-size:.8rem;color:var(--text-1);font-weight:500}
+    .check-badge{padding:.15rem .5rem;border-radius:4px;font-size:.65rem;font-weight:600;font-family:var(--font-m)}
+    .check-badge.done{background:var(--green-dim);color:var(--green)}
+    .check-badge.pending{background:var(--bg-hover);color:var(--text-3)}
+    .comment-wrap{margin-top:.5rem;padding-left:1.75rem}
+    .comment-input{width:100%;padding:.4rem .65rem;background:#f7f8fa;border:1px solid var(--border-med);border-radius:var(--r-sm);color:var(--text-2);font-family:var(--font-b);font-size:.78rem;transition:all var(--t)}
+    .comment-input:focus{outline:none;border-color:var(--blue-glow);color:var(--text-1)}
+
+    /* ── HISTORY ── */
+    .history-list{display:flex;flex-direction:column;gap:.4rem;max-height:280px;overflow-y:auto}
+    .history-item{padding:.65rem .875rem;background:#ffffff;border:1px solid var(--border-med);border-left:3px solid var(--green);border-radius:var(--r-sm);font-size:.78rem}
+    .history-date{font-family:var(--font-m);font-weight:500;color:var(--green);margin-bottom:.2rem}
+    .history-comment{color:var(--text-2);font-style:italic}
+
+    /* ── JOB DETAIL ── */
+    .jd-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1rem}
+    .jd-field{display:flex;flex-direction:column;gap:2px}
+    .jd-fl{font-size:.65rem;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.8px}
+    .jd-fv{font-size:.82rem;color:var(--text-1)}
+    .jd-scope{background:#f7f8fa;border:1px solid var(--border-med);border-radius:var(--r-sm);padding:.65rem .875rem;font-size:.82rem;color:var(--text-2);line-height:1.5;margin-bottom:1rem}
+
+    /* ── TOAST ── */
+    #toast-container{position:fixed;bottom:1.25rem;right:1.25rem;z-index:9000;display:flex;flex-direction:column;gap:.4rem}
+    .toast{padding:.75rem 1rem;background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-md);color:var(--text-1);font-size:.82rem;display:flex;align-items:center;gap:.6rem;min-width:220px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:toastIn .25s cubic-bezier(.16,1,.3,1) both;transition:opacity .3s}
+    @keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+    .toast.ts{border-left:3px solid var(--green)}.toast.ts i{color:var(--green)}
+    .toast.tw{border-left:3px solid var(--amber)}.toast.tw i{color:var(--amber)}
+    .toast.ti{border-left:3px solid var(--blue)}.toast.ti i{color:var(--blue-light)}
+
+    /* ── EMPTY ── */
+    .empty{grid-column:1/-1;text-align:center;padding:3rem 1rem;color:var(--text-3)}
+    .empty i{font-size:2rem;margin-bottom:.75rem;display:block}
+    .empty p{font-size:.82rem}
+
+    /* ── RESPONSIVE ── */
+    @media(max-width:640px){
+        :root{--sidebar-w:56px}
+        .cols-3{grid-template-columns:1fr 1fr}
+        .cols-2{grid-template-columns:1fr}
+        .jd-grid{grid-template-columns:1fr}
+        .stats-row{grid-template-columns:1fr 1fr}
+        .panel-grid{grid-template-columns:1fr!important}
+    }
+    </style>
+</head>
+<body>
+
+<div id="toast-container"></div>
+
+<!-- LOGIN -->
+<div id="login-screen">
+    <div class="login-card">
+        <div class="login-bar"></div>
+        <div class="login-body">
+            <div class="login-logo-row">
+                <div class="login-icon"><i class="fas fa-hard-hat"></i></div>
+                <div class="login-brand">
+                    <div class="name">Multiequipos</div>
+                    <div class="tag">Gestión de Mantenimiento</div>
+                </div>
             </div>
-            <div class="cat-chip-amount">${fmtCLP(amt)}</div>
-            <div class="cat-chip-pct">${pct}% del total</div>
-            <div style="height:3px;background:var(--border);border-radius:2px;margin-top:.5rem;overflow:hidden">
-                <div style="height:100%;width:${pct}%;background:${CAT_COLORS[i]};border-radius:2px;transition:width .6s ease"></div>
+            <div class="login-h">Bienvenido</div>
+            <div class="login-sub">Ingrese sus credenciales para acceder al sistema</div>
+            <form id="login-form" autocomplete="on">
+                <div class="lf-g">
+                    <label class="lf-label">Correo electrónico</label>
+                    <div class="lf-wrap">
+                        <input type="email" id="username" class="lf-input" placeholder="usuario@empresa.com" required autocomplete="email">
+                        <i class="fas fa-envelope lf-icon"></i>
+                    </div>
+                </div>
+                <div class="lf-g">
+                    <label class="lf-label">Contraseña</label>
+                    <div class="lf-wrap">
+                        <input type="password" id="password" class="lf-input" placeholder="••••••••" required autocomplete="current-password">
+                        <i class="fas fa-lock lf-icon"></i>
+                    </div>
+                </div>
+                <button type="submit" class="btn-login"><i class="fas fa-arrow-right-to-bracket"></i> Ingresar</button>
+            </form>
+            <div id="login-error" class="hidden"><i class="fas fa-circle-exclamation"></i> Correo o contraseña incorrectos.</div>
+        </div>
+    </div>
+</div>
+
+<!-- APP -->
+<div id="app-container" class="hidden">
+    <nav id="sidebar">
+        <div class="sb-logo"><i class="fas fa-hard-hat"></i></div>
+        <div class="sb-nav">
+            <button id="btn-view-dashboard" class="nav-btn active"><i class="fas fa-chart-pie"></i><span class="nav-tip">Dashboard</span></button>
+            <button id="btn-view-jobs" class="nav-btn"><i class="fas fa-briefcase"></i><span class="nav-tip">Trabajos</span></button>
+            <button id="btn-view-calendar" class="nav-btn"><i class="fas fa-calendar-alt"></i><span class="nav-tip">Calendario</span></button>
+        </div>
+        <div class="sb-spacer"></div>
+        <div class="sb-bottom">
+            <div class="sb-divider"></div>
+            <button id="btn-add" class="nav-btn hidden"><i class="fas fa-plus"></i><span class="nav-tip">Nuevo trabajo</span></button>
+            <button id="btn-logout" class="nav-btn"><i class="fas fa-sign-out-alt"></i><span class="nav-tip">Cerrar sesión</span></button>
+        </div>
+    </nav>
+
+    <div id="main-area">
+        <div id="topbar">
+            <div class="topbar-title">Multi<span>equipos</span></div>
+        </div>
+        <div id="view-area">
+
+            <!-- DASHBOARD -->
+            <div id="view-dashboard" class="view-pane">
+                <div id="dashboard-summary">
+                    <div class="page-hdr">
+                        <div class="ph-left">
+                            <div class="page-title">Dashboard</div>
+                            <div class="page-sub">Resumen de trabajos de mantenimiento</div>
+                        </div>
+                    </div>
+                    <div class="filters-row">
+                        <div class="fg">
+                            <label class="fg-label">Cliente</label>
+                            <select id="filter-client" class="fg-select"><option value="all">Todos los clientes</option></select>
+                        </div>
+                        <div class="fg">
+                            <label class="fg-label">Tipo</label>
+                            <select id="filter-type" class="fg-select">
+                                <option value="all">Todos</option>
+                                <option value="periodic">Periódicos</option>
+                                <option value="unique">Únicos</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stat-card blue">
+                            <div class="stat-icon"><i class="fas fa-percent"></i></div>
+                            <div class="stat-value" id="stat-percent">0%</div>
+                            <div class="stat-label">Completado</div>
+                        </div>
+                        <div class="stat-card green clickable" id="card-completed">
+                            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                            <div class="stat-value" id="stat-completed">0</div>
+                            <div class="stat-label">Realizados</div>
+                            <div class="stat-hint">↗ Ver lista</div>
+                        </div>
+                        <div class="stat-card red clickable" id="card-delayed">
+                            <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                            <div class="stat-value" id="stat-delayed">0</div>
+                            <div class="stat-label">Retrasados</div>
+                            <div class="stat-hint">↗ Ver lista</div>
+                        </div>
+                        <div class="stat-card amber">
+                            <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                            <div class="stat-value" id="stat-pending">0</div>
+                            <div class="stat-label">Pendientes</div>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:260px 1fr;gap:1rem;" class="panel-grid">
+                        <div class="panel">
+                            <div class="panel-hdr"><div class="panel-title">Visitas por Periodo</div></div>
+                            <div class="panel-body" style="padding-top:.5rem">
+                                <table class="ptable">
+                                    <tr><td>Últimos 7 días</td><td id="stat-visits-7">0</td></tr>
+                                    <tr><td>Últimos 30 días</td><td id="stat-visits-30">0</td></tr>
+                                    <tr><td>Este año</td><td id="stat-visits-year">0</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="panel">
+                            <div class="panel-hdr">
+                                <div class="panel-title">Rendimiento Mensual</div>
+                                <span style="font-family:var(--font-m);font-size:.68rem;color:var(--text-3)" id="chart-year"></span>
+                            </div>
+                            <div class="panel-body"><div class="chart-wrap"><canvas id="monthlyChart"></canvas></div></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="dashboard-drilldown" class="hidden">
+                    <div class="dd-hdr">
+                        <button id="btn-back-dashboard" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Volver</button>
+                        <div class="dd-title" id="drilldown-title">Lista</div>
+                    </div>
+                    <div id="drilldown-list" class="job-grid"></div>
+                </div>
             </div>
-        </div>`;
-    }).join('');
 
-    // ── Chart: Comparativa OTs (horizontal bar) ───────────
-    const otTotals = {};
-    allExp.forEach(r => {
-        const key = r.otId || 'SIN_OT';
-        otTotals[key] = (otTotals[key] || 0) + parseFloat(r.amount || 0);
-    });
-    const sortedOTs  = Object.entries(otTotals).sort((a,b) => b[1]-a[1]).slice(0,12);
-    const otChartLbls = sortedOTs.map(([id]) => {
-        const ot = otData.find(x => x.id === id);
-        return ot ? `${ot.number}` : id;
-    });
+            <!-- JOBS -->
+            <div id="view-jobs" class="view-pane hidden">
+                <div class="page-hdr">
+                    <div class="ph-left">
+                        <div class="page-title">Trabajos</div>
+                        <div class="page-sub" id="jobs-count-label">—</div>
+                    </div>
+                    <div class="search-wrap">
+                        <i class="fas fa-search si"></i>
+                        <input type="text" id="job-search" class="search-input" placeholder="Buscar cliente...">
+                    </div>
+                </div>
+                <div id="job-list-container" class="job-grid"></div>
+            </div>
 
-    destroyCostChart('topOTs');
-    costCharts['topOTs'] = new Chart(document.getElementById('chart-cost-top-ots'), {
-        type: 'bar',
-        data: {
-            labels: otChartLbls,
-            datasets: [{
-                data: sortedOTs.map(([,v]) => v),
-                backgroundColor: sortedOTs.map((_, i) => CAT_COLORS[i % CAT_COLORS.length]),
-                borderRadius: 5, borderSkipped: false
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false }, tooltip: { backgroundColor:'#1B2A4A', titleColor:'#e2e8f4', bodyColor:'#9bacc8', cornerRadius:8, callbacks: { label: ctx => ` ${fmtCLP(ctx.raw)}` } } },
-            scales: {
-                x: { grid:{color:'#f0f3f8'}, border:{display:false}, ticks:{font:{size:11},color:'#8896b0',callback:v=>fmtCLP(v)} },
-                y: { grid:{display:false}, border:{display:false}, ticks:{font:{size:11},color:'#4a5878',fontWeight:'600'} }
+            <!-- CALENDAR -->
+            <div id="view-calendar" class="hidden"></div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL FORM -->
+<div id="modal-form" class="modal-overlay hidden">
+    <div class="modal">
+        <div class="modal-bar"></div>
+        <div class="modal-hdr">
+            <div class="modal-hdr-title" id="modal-title">Nuevo Trabajo</div>
+            <button class="btn btn-ghost btn-icon close-modal"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <form id="job-form">
+                <input type="hidden" id="record-id">
+                <div class="form-group">
+                    <label class="form-label">Nombre / Cliente *</label>
+                    <input type="text" id="j-name" class="form-control" required placeholder="Empresa o cliente">
+                </div>
+                <div class="form-row cols-2">
+                    <div class="form-group">
+                        <label class="form-label">Persona de Contacto</label>
+                        <input type="text" id="j-contact" class="form-control" placeholder="Nombre">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Teléfono</label>
+                        <input type="tel" id="j-phone" class="form-control" placeholder="+506 ...">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ubicación</label>
+                    <input type="text" id="j-location" class="form-control" placeholder="Dirección o zona">
+                </div>
+                <div class="form-section">Programación</div>
+                <div class="form-row cols-3">
+                    <div class="form-group">
+                        <label class="form-label">Fecha de Inicio *</label>
+                        <input type="date" id="j-start-date" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Periodo (meses)</label>
+                        <input type="number" id="j-period" class="form-control" min="0" max="60" value="1" placeholder="0 = única">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Duración (días)</label>
+                        <input type="number" id="j-duration" class="form-control" min="1" max="365" value="1">
+                    </div>
+                </div>
+                <div class="form-section">Descripción</div>
+                <div class="form-group">
+                    <label class="form-label">Alcance del Trabajo</label>
+                    <textarea id="j-scope" class="form-control" rows="3" placeholder="Describe el alcance..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Información Adicional</label>
+                    <textarea id="j-additional" class="form-control" rows="2" placeholder="Notas, accesos, equipo..."></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost close-modal">Cancelar</button>
+            <button id="btn-save-job" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DETAILS -->
+<div id="modal-job-details" class="modal-overlay hidden">
+    <div class="modal">
+        <div class="modal-bar"></div>
+        <div class="modal-hdr">
+            <div class="modal-hdr-title">Detalles del Trabajo</div>
+            <div style="display:flex;gap:.4rem;align-items:center">
+                <button id="jd-btn-edit" class="btn btn-ghost btn-sm"><i class="fas fa-edit"></i> Editar</button>
+                <button id="jd-btn-delete" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
+                <button class="btn btn-ghost btn-icon close-modal"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+        <div class="modal-body">
+            <div style="margin-bottom:1rem">
+                <div style="font-family:var(--font-d);font-size:1.15rem;font-weight:800;color:var(--text-1);letter-spacing:-.3px;margin-bottom:.4rem" id="jd-client-name"></div>
+                <div style="display:flex;gap:.4rem;flex-wrap:wrap" id="jd-badges"></div>
+            </div>
+            <div class="jd-grid">
+                <div class="jd-field"><div class="jd-fl"><i class="fas fa-user"></i> Contacto</div><div class="jd-fv" id="jd-contact">—</div></div>
+                <div class="jd-field"><div class="jd-fl"><i class="fas fa-phone"></i> Teléfono</div><div class="jd-fv" id="jd-phone">—</div></div>
+                <div class="jd-field" style="grid-column:1/-1"><div class="jd-fl"><i class="fas fa-map-marker-alt"></i> Ubicación</div><div class="jd-fv" id="jd-location">—</div></div>
+            </div>
+            <div style="font-size:.68rem;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.4rem">Alcance</div>
+            <div class="jd-scope" id="jd-scope"></div>
+            <div id="jd-additional-wrap" style="margin-bottom:1rem">
+                <div style="font-size:.68rem;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.4rem">Información Adicional</div>
+                <div class="jd-scope" id="jd-additional" style="margin-bottom:0"></div>
+            </div>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="jd-check">Programación</button>
+                <button class="tab-btn" data-tab="jd-hist">Historial</button>
+            </div>
+            <div id="jd-check" class="tab-content">
+                <div style="font-size:.72rem;color:var(--text-3);margin-bottom:.75rem;font-family:var(--font-m)" id="jd-period-label"></div>
+                <div id="jd-checklist-wrapper" class="checklist-wrap"></div>
+            </div>
+            <div id="jd-hist" class="tab-content hidden">
+                <div style="font-size:.78rem;color:var(--text-2);margin-bottom:.75rem">Registro de visitas completadas</div>
+                <div id="jd-history-list" class="history-list"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+    const fbConfig = {
+        apiKey: "AIzaSyDmr0OxeUQGI-XnWaHwmTkJYccG7yM58T8",
+        authDomain: "multiequipos-app-c0f80.firebaseapp.com",
+        projectId: "multiequipos-app-c0f80",
+        storageBucket: "multiequipos-app-c0f80.firebasestorage.app",
+        messagingSenderId: "167104291774",
+        appId: "1:167104291774:web:b86324beda11a3cc6b0bef"
+    };
+    const fbApp  = initializeApp(fbConfig);
+    const db     = getFirestore(fbApp);
+    const auth   = getAuth(fbApp);
+    const jobsRef = collection(db, "maintenances");
+
+    let state = { user:null, jobs:[], calendar:null, currentView:'dashboard', chartInstance:null };
+
+    /* AUTH */
+    const Auth = {
+        check: () => onAuthStateChanged(auth, user => {
+            if (user) {
+                state.user = user.email;
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('app-container').classList.remove('hidden');
+                App.show(); DB.listen();
+            } else {
+                document.getElementById('login-screen').classList.remove('hidden');
+                document.getElementById('app-container').classList.add('hidden');
             }
-        }
-    });
+        }),
+        login: (u,p) => signInWithEmailAndPassword(auth,u,p)
+            .then(() => { document.getElementById('login-error').classList.add('hidden'); document.getElementById('login-form').reset(); })
+            .catch(() => document.getElementById('login-error').classList.remove('hidden')),
+        logout: () => signOut(auth).then(() => location.reload())
+    };
 
-    // ── Chart: Donut por categoria ────────────────────────
-    destroyCostChart('catDonut');
-    costCharts['catDonut'] = new Chart(document.getElementById('chart-cost-donut-cat'), {
-        type: 'doughnut',
-        data: {
-            labels: EXPENSE_TYPES,
-            datasets: [{ data: EXPENSE_TYPES.map(c => catTotals[c]||0), backgroundColor: CAT_COLORS, borderWidth: 3, borderColor: '#fff', hoverOffset: 8 }]
+    /* DB */
+    const DB = {
+        listen: () => {
+            if (!state.user) return;
+            onSnapshot(query(jobsRef, orderBy("name","asc")), snap => {
+                state.jobs = snap.docs.map(d => ({id:d.id,...d.data()}));
+                if (state.currentView==='jobs')      App.renderJobList();
+                if (state.currentView==='calendar')  App.renderCalendar();
+                if (state.currentView==='dashboard') Dashboard.render();
+            }, console.error);
         },
-        options: donutDefaults(fmtCLP, EXPENSE_TYPES)
-    });
+        add:    data => addDoc(jobsRef,{...data,createdAt:new Date()}).then(()=>Toast.show('Trabajo programado','success')).catch(console.error),
+        update: (data,id) => updateDoc(doc(db,"maintenances",id),data).then(()=>Toast.show('Registro actualizado','success')).catch(console.error),
+        delete: id => deleteDoc(doc(db,"maintenances",id)).then(()=>Toast.show('Trabajo eliminado','warning')).catch(console.error),
+        getById: id => state.jobs.find(j=>j.id===id)
+    };
 
-    // ── OT Cards — desglose por proyecto ─────────────────
-    const otDetailMap = {};
-    allExp.forEach(r => {
-        const key = r.otId || 'SIN_OT';
-        const cat = r.expenseType || 'Otros';
-        const amt = parseFloat(r.amount || 0);
-        if (!otDetailMap[key]) {
-            const ot = otData.find(x => x.id === key);
-            otDetailMap[key] = {
-                id: key,
-                number: ot?.number || key,
-                client: ot?.client || '—',
-                desc:   ot?.description || '—',
-                cats: {}, receipts: []
+    /* JOB LOGIC */
+    const JL = {
+        generatePeriods: job => {
+            if (!job.startDate) return [];
+            const today=new Date(), endF=new Date(today.getFullYear(), 11, 31);
+            if (!job.checklist) job.checklist=[];
+            const excl=job.excludedDates||[], periods=[];
+            let cur=new Date(job.startDate);
+            const per=parseInt(job.periodMonths)||0;
+            const push = ds => {
+                const ex=job.checklist.find(p=>p.date===ds);
+                periods.push({date:ds,completed:ex?.completed||false,comment:ex?.comment||"",dateCompleted:ex?.dateCompleted||null});
             };
-            EXPENSE_TYPES.forEach(c => otDetailMap[key].cats[c] = 0);
-        }
-        otDetailMap[key].cats[cat] = (otDetailMap[key].cats[cat] || 0) + amt;
-        otDetailMap[key].receipts.push(r);
-    });
-
-    const detailRows = Object.values(otDetailMap).sort((a,b) => {
-        const tA = Object.values(a.cats).reduce((x,y)=>x+y,0);
-        const tB = Object.values(b.cats).reduce((x,y)=>x+y,0);
-        return tB - tA;
-    });
-
-    const cardsEl = document.getElementById('cost-ot-cards');
-    cardsEl.innerHTML = detailRows.map((row, idx) => {
-        const rowTotal = Object.values(row.cats).reduce((x,y)=>x+y,0);
-        const isGeneral = false;
-
-        // Category items
-        const catItems = EXPENSE_TYPES.map((cat, ci) => {
-            const amt = row.cats[cat] || 0;
-            if (amt === 0) return '';
-            const pct = rowTotal > 0 ? ((amt/rowTotal)*100).toFixed(1) : '0';
-            return `<div class="ot-cat-item">
-                <div class="ot-cat-item" style="padding:0;border:none;background:none">
-                    <div style="position:absolute;top:0;left:0;bottom:0;width:3px;background:${CAT_COLORS[ci]};border-radius:2px 0 0 2px"></div>
-                </div>
-                <div class="ot-cat-name" style="display:flex;align-items:center;gap:.3rem"><span>${CAT_ICONS[ci]}</span>${cat}</div>
-                <div class="ot-cat-amount">${fmtCLP(amt)}</div>
-                <div class="ot-cat-pct">${pct}% del proyecto</div>
-                <div class="ot-cat-bar"><div class="ot-cat-bar-fill" style="width:${pct}%;background:${CAT_COLORS[ci]}"></div></div>
-            </div>`;
-        }).filter(x=>x).join('');
-
-        // Receipts table
-        const recs = row.receipts.sort((a,b)=>new Date(b.date)-new Date(a.date));
-        const techName = uid => { const u = usersData.find(x=>x.id===uid); return u?u.fullName.split(' ').slice(0,2).join(' '):'—'; };
-        const receiptsRows = recs.map(r => `<tr>
-            <td>${fmtDate(r.date)}</td>
-            <td>${r.invoiceNum||'—'}</td>
-            <td><span style="background:var(--navy-50);border:1px solid var(--border);border-radius:3px;padding:.1rem .4rem;font-size:.7rem;font-weight:600">${r.expenseType||'—'}</span></td>
-            <td>${r.store||'—'}</td>
-            <td style="color:var(--text-3);font-size:.75rem">${r.description||'—'}</td>
-            <td>${techName(r.userId)}</td>
-            <td style="text-align:right;font-weight:600;color:var(--text-1)">${fmtCLP(r.amount)}</td>
-        </tr>`).join('');
-
-        return `<div class="ot-card" id="otcard-${idx}">
-            <div class="ot-card-header" onclick="window.toggleOTCard('otcard-${idx}')">
-                <div class="ot-card-left">
-                    <span class="ot-badge ${isGeneral?'general':''}">${row.number}</span>
-                    <div class="ot-card-info">
-                        <div class="ot-card-client">${row.client}</div>
-                        <div class="ot-card-desc">${row.desc}</div>
-                    </div>
-                </div>
-                <div class="ot-card-right">
-                    <div style="text-align:right">
-                        <div class="ot-total-label">Total Gastado</div>
-                        <div class="ot-total-value">${fmtCLP(rowTotal)}</div>
-                    </div>
-                    <div style="font-size:.75rem;color:var(--text-3);text-align:right">
-                        <div>${recs.length} factura${recs.length!==1?'s':''}</div>
-                    </div>
-                    <button type="button"
-                        class="btn btn-sm btn-primary"
-                        style="flex-shrink:0"
-                        onclick="event.stopPropagation();window.generateOTReport('${row.id}')"
-                        title="Generar reporte PDF de costos">
-                        ↓ Reporte
-                    </button>
-                    <div class="ot-chevron">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-                    </div>
-                </div>
-            </div>
-            <div class="ot-card-body">
-                ${catItems ? `<div class="ot-cat-grid">${catItems}</div>` : ''}
-                <div class="ot-receipts-title">Comprobantes (${recs.length})</div>
-                <div style="overflow-x:auto">
-                    <table class="ot-receipts-table">
-                        <thead><tr><th>Fecha</th><th>Factura</th><th>Tipo</th><th>Comercio</th><th>Descripcion</th><th>Tecnico</th><th style="text-align:right">Monto</th></tr></thead>
-                        <tbody>${receiptsRows}</tbody>
-                        <tfoot><tr style="background:var(--navy-50)">
-                            <td colspan="6" style="text-align:right;font-weight:700;padding:.6rem;font-size:.82rem">TOTAL:</td>
-                            <td style="text-align:right;font-weight:700;color:var(--navy-800);padding:.6rem">${fmtCLP(rowTotal)}</td>
-                        </tr></tfoot>
-                    </table>
-                </div>
-            </div>
-        </div>`;
-    }).join('') || `<div class="empty-state"><div class="icon">📦</div><p>Sin proyectos con gastos para los filtros seleccionados</p></div>`;
-};
-
-window.toggleOTCard = (id) => {
-    document.getElementById(id)?.classList.toggle('open');
-};
-
-
-/* ══════════════════════════════════════════
-   GASTOS SIN CLASIFICAR
-══════════════════════════════════════════ */
-
-window.loadUnclassified = async () => {
-    // Ensure OTs are loaded
-    if (!otData.length) {
-        const snap = await getDocs(collection(db, 'workOrders'));
-        otData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        otData.sort((a, b) => a.number.localeCompare(b.number));
-    }
-
-    const allRecs = (await getDocs(collection(db, 'records'))).docs.map(d => ({ id: d.id, ...d.data() }));
-    const unclassified = allRecs.filter(r =>
-        r.type === 'expense' && !r.expenseType
-    ).sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    const countEl = document.getElementById('unclassified-count');
-    countEl.textContent = unclassified.length === 0
-        ? '✓ Todos los gastos están clasificados'
-        : `${unclassified.length} gasto${unclassified.length !== 1 ? 's' : ''} sin clasificar`;
-    countEl.style.background = unclassified.length === 0 ? 'var(--green-bg)' : 'var(--crimson-bg)';
-    countEl.style.color      = unclassified.length === 0 ? 'var(--green)' : 'var(--crimson)';
-    countEl.style.borderColor= unclassified.length === 0 ? 'rgba(29,122,79,.2)' : 'rgba(192,39,45,.2)';
-    // Update badge on tab
-    const badge = document.getElementById('gg-unclassified-badge');
-    if (badge) { badge.textContent = unclassified.length; badge.style.display = unclassified.length > 0 ? 'inline' : 'none'; }
-
-    // Show bulk reassign button if there are records with otId=GENERAL or no otId
-    // Hide bulk button — no longer needed after cleanup
-    const bulkBtn = document.getElementById('btn-bulk-reassign');
-    if (bulkBtn) bulkBtn.style.display = 'none';
-
-    // Build OT options
-    let otOpts = '';
-    otData.forEach(ot => {
-        otOpts += `<option value="${ot.id}" data-number="${ot.number}" data-client="${ot.client}">${ot.number} — ${ot.client}</option>`;
-    });
-
-    const catOpts = `
-        <option value="">Seleccione...</option>
-        <option value="Materiales">Materiales</option>
-        <option value="Insumos">Insumos</option>
-        <option value="Herramientas">Herramientas</option>
-        <option value="Repuestos">Repuestos</option>
-        <option value="Combustible">Combustible</option>
-        <option value="Viaticos">Viáticos</option>
-        <option value="Hospedaje">Hospedaje</option>
-        <option value="Parqueo">Parqueo</option>
-        <option value="Peajes">Peajes</option>
-        <option value="Otros">Otros</option>`;
-
-    const tbody = document.querySelector('#unclassified-table tbody');
-
-    if (unclassified.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
-            <div class="icon" style="font-size:2rem">✅</div>
-            <p>Todos los gastos tienen OT y tipo de gasto asignado</p>
-        </div></td></tr>`;
-        return;
-    }
-
-    tbody.innerHTML = unclassified.map(r => {
-        const tech = usersData.find(u => u.id === r.userId);
-        const techName = tech ? tech.fullName.split(' ').slice(0,2).join(' ') : '—';
-        const missingOT  = !r.otId;
-        const missingCat = !r.expenseType;
-
-        return `<tr id="ucrow-${r.id}">
-            <td>${fmtDate(r.date)}</td>
-            <td style="font-weight:600;color:var(--text-1)">${techName}</td>
-            <td style="font-size:.78rem">${r.invoiceNum||'—'}</td>
-            <td>${r.store||'—'}</td>
-            <td style="font-weight:600">${fmt(r.amount)}</td>
-            <td>
-                <select class="form-control" id="uc-ot-${r.id}" style="font-size:.78rem;padding:.4rem .6rem"
-                    ${!missingOT ? '' : 'style="border-color:var(--amber)"'}>
-                    ${otOpts}
-                </select>
-            </td>
-            <td>
-                <select class="form-control" id="uc-cat-${r.id}" style="font-size:.78rem;padding:.4rem .6rem">
-                    ${catOpts}
-                </select>
-            </td>
-            <td>
-                <button type="button" class="btn btn-success btn-sm" onclick="window.saveUnclassified('${r.id}')">
-                    ✓ Guardar
-                </button>
-            </td>
-        </tr>`;
-    }).join('');
-
-    // Pre-select existing values
-    unclassified.forEach(r => {
-        const otSel = document.getElementById(`uc-ot-${r.id}`);
-        const catSel = document.getElementById(`uc-cat-${r.id}`);
-        if (otSel && r.otId) otSel.value = r.otId;
-        if (catSel && r.expenseType) catSel.value = r.expenseType;
-    });
-};
-
-window.saveUnclassified = async (recordId) => {
-    const otSel  = document.getElementById(`uc-ot-${recordId}`);
-    const catSel = document.getElementById(`uc-cat-${recordId}`);
-    if (!otSel || !catSel) return;
-
-    const otId  = otSel.value;
-    const selOpt = otSel.options[otSel.selectedIndex];
-    const otNumber = selOpt ? (selOpt.dataset.number || 'General') : 'General';
-    const otClient = selOpt ? (selOpt.dataset.client || '') : '';
-    const expType  = catSel.value;
-
-    if (!expType) { showToast('Seleccione un tipo de gasto', 'warning'); return; }
-
-    try {
-        await updateDoc(doc(db, 'records', recordId), {
-            otId, otNumber, otClient, expenseType: expType
-        });
-
-        // Animate row removal
-        const row = document.getElementById(`ucrow-${recordId}`);
-        if (row) {
-            row.style.transition = 'opacity .3s, transform .3s';
-            row.style.opacity = '0';
-            row.style.transform = 'translateX(20px)';
-            setTimeout(() => window.loadUnclassified(), 350);
-        }
-        showToast('Gasto clasificado correctamente', 'success');
-    } catch(e) {
-        showToast('Error al guardar: ' + e.message, 'error');
-    }
-};
-
-
-/* Toggle "Otros" detail field */
-window.toggleOtrosField = function(val) {
-    const wrap = document.getElementById('otros-field-wrap');
-    const input = document.getElementById('exp-otros-detail');
-    if (!wrap) return;
-    if (val === 'Otros') {
-        wrap.classList.remove('hidden');
-        input.required = true;
-        input.focus();
-    } else {
-        wrap.classList.add('hidden');
-        input.required = false;
-        input.value = '';
-    }
-};
-
-
-/* ══════════════════════════════════════════
-   REPORTE DE COSTOS POR OT
-══════════════════════════════════════════ */
-window.generateOTReport = async (otId) => {
-
-    // Fetch all expenses for this OT
-    const allRecs = (await getDocs(collection(db, 'records'))).docs.map(d=>({id:d.id,...d.data()}));
-    const exps = allRecs.filter(r => {
-        if (r.type !== 'expense') return false;
-        return r.otId === otId;
-    }).sort((a,b) => new Date(a.date) - new Date(b.date));
-
-    if (!exps.length) { showToast('Esta OT no tiene gastos registrados', 'warning'); return; }
-
-    // OT info
-    const ot = otData.find(x => x.id === otId);
-    const otNumber = ot?.number || otId;
-    const otClient = ot?.client || '—';
-    const otDesc   = ot?.description || '—';
-
-    // Totals
-    const grandTotal = exps.reduce((s,r) => s + parseFloat(r.amount||0), 0);
-    const ALL_CATS = ['Materiales','Insumos','Herramientas','Repuestos','Combustible','Viaticos','Hospedaje','Parqueo','Peajes','Otros'];
-    const catTotals = {};
-    ALL_CATS.forEach(c => catTotals[c] = 0);
-    exps.forEach(r => {
-        const raw = r.expenseType || 'Otros';
-        const cat = raw.startsWith('Otros:') ? 'Otros' : raw;
-        catTotals[cat] = (catTotals[cat]||0) + parseFloat(r.amount||0);
-    });
-    const usedCats = ALL_CATS.filter(c => catTotals[c] > 0);
-
-    // Techs involved
-    const techIds = [...new Set(exps.map(r=>r.userId))];
-    const techNames = techIds.map(id => usersData.find(u=>u.id===id)?.fullName || '—');
-    const techName = uid => usersData.find(u=>u.id===uid)?.fullName.split(' ').slice(0,2).join(' ') || '—';
-
-    // Date range
-    const dates = exps.map(r=>r.date).sort();
-    const dateRange = `${fmtDate(dates[0])} al ${fmtDate(dates[dates.length-1])}`;
-
-    // ── Build HTML ─────────────────────────────────────────────
-    let html = '';
-
-    // Header
-    html += `<div class="rpt-header">
-        <div class="rpt-company">
-            <h1>Multiequipos</h1>
-            <p>Reporte de Análisis de Costos</p>
-        </div>
-        <div class="rpt-doc">
-            <h2>Reporte de Costos</h2>
-            <p>Fecha de emisión: ${new Date().toLocaleDateString('es-CR')}</p>
-            <p>Periodo: ${dateRange}</p>
-        </div>
-    </div>`;
-
-    // OT info box
-    html += `<div class="rpt-ot-box">
-        <h3>${otNumber} — ${otClient}</h3>
-        <p><strong>Descripción:</strong> ${otDesc}</p>
-        <p><strong>Técnicos involucrados:</strong> ${techNames.join(', ')}</p>
-        <p><strong>Total de comprobantes:</strong> ${exps.length}</p>
-    </div>`;
-
-    // Category breakdown
-    html += `<div class="rpt-section-title">Desglose por Categoría de Gasto</div>`;
-    html += `<div class="rpt-cat-grid">`;
-    usedCats.forEach(cat => {
-        const pct = grandTotal > 0 ? ((catTotals[cat]/grandTotal)*100).toFixed(1) : '0.0';
-        html += `<div class="rpt-cat-item">
-            <div class="rct-label">${cat}</div>
-            <div class="rct-amount">${fmtCLP(catTotals[cat])}</div>
-            <div class="rct-pct">${pct}% del total</div>
-        </div>`;
-    });
-    html += `</div>`;
-
-    // Receipts table
-    html += `<div class="rpt-section-title">Detalle de Comprobantes (${exps.length})</div>`;
-    html += `<table class="rpt-table" style="table-layout:fixed">
-        <colgroup>
-            <col style="width:11%"><col style="width:13%"><col style="width:15%">
-            <col style="width:20%"><col style="width:18%"><col style="width:23%">
-        </colgroup>
-        <thead>
-            <tr>
-                <th>Fecha</th>
-                <th>Factura</th>
-                <th>Tipo de Gasto</th>
-                <th>Comercio</th>
-                <th>Técnico</th>
-                <th style="text-align:right">Monto</th>
-            </tr>
-        </thead>
-        <tbody>`;
-
-    exps.forEach(r => {
-        const raw = r.expenseType || '—';
-        const tipo = raw.startsWith('Otros:') ? `Otros: ${raw.replace('Otros:','').trim()}` : raw;
-        html += `<tr>
-            <td>${fmtDate(r.date)}</td>
-            <td>${r.invoiceNum||'—'}</td>
-            <td>${tipo}</td>
-            <td>${r.store||'—'}</td>
-            <td>${techName(r.userId)}</td>
-            <td style="text-align:right;font-weight:600">${fmtCLP(r.amount)}</td>
-        </tr>`;
-    });
-
-    html += `</tbody>
-        <tfoot>
-            <tr>
-                <td colspan="5" style="text-align:right">TOTAL:</td>
-                <td style="text-align:right">${fmtCLP(grandTotal)}</td>
-            </tr>
-        </tfoot>
-    </table>`;
-
-    // Total box
-    html += `<div class="rpt-total-box">
-        <span class="rtb-label">COSTO TOTAL DEL PROYECTO</span>
-        <span class="rtb-amount">${fmtCLP(grandTotal)}</span>
-    </div>`;
-
-    // Signatures
-    html += `<div class="rpt-sig">
-        <div class="rpt-sig-block">Elaborado por<br><br>___________________<br>Administración</div>
-        <div class="rpt-sig-block">Revisado por<br><br>___________________<br>Financiero</div>
-    </div>`;
-
-    // ── Print ──────────────────────────────────────────────────
-    // Use a dedicated print container to avoid polluting #print-area
-    const printWin = window.open('', '_blank', 'width=900,height=700');
-    printWin.document.write(`<!DOCTYPE html><html><head>
-        <meta charset="UTF-8">
-        <title>Reporte Costos — ${otNumber}</title>
-        <style>
-            * { box-sizing:border-box; margin:0; padding:0; }
-            body { font-family: Arial, sans-serif; font-size:12px; color:#222; padding:30px 40px; }
-            ${document.querySelector('style') ? '' : ''}
-            .rpt-header{border-bottom:3px solid #1B2A4A;padding-bottom:14px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:flex-start;}
-            .rpt-company h1{font-size:22px;color:#1B2A4A;margin-bottom:3px;}
-            .rpt-company p{font-size:12px;color:#666;}
-            .rpt-doc h2{font-size:16px;text-transform:uppercase;letter-spacing:1px;color:#1B2A4A;text-align:right;}
-            .rpt-doc p{font-size:11px;color:#666;text-align:right;}
-            .rpt-ot-box{background:#f5f7fb;border:1px solid #dde4ef;border-left:4px solid #1B2A4A;border-radius:5px;padding:14px 18px;margin-bottom:18px;}
-            .rpt-ot-box h3{font-size:18px;font-weight:700;color:#1B2A4A;margin-bottom:4px;}
-            .rpt-ot-box p{font-size:13px;color:#555;margin:3px 0;}
-            .rpt-section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1B2A4A;border-bottom:1px solid #dde4ef;padding-bottom:5px;margin:16px 0 10px;}
-            .rpt-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px;table-layout:fixed;}
-            .rpt-table th{background:#1B2A4A;color:#fff;padding:7px 8px;text-align:left;font-size:11px;}
-            .rpt-table td{padding:6px 8px;border-bottom:1px solid #e8ecf2;overflow:hidden;word-break:break-word;}
-            .rpt-table tr:nth-child(even) td{background:#f5f7fb;}
-            .rpt-table tfoot td{background:#1B2A4A;color:#fff;font-weight:700;padding:7px 8px;}
-            .rpt-cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
-            .rpt-cat-item{border:1px solid #dde4ef;border-radius:5px;padding:10px 12px;background:#fff;}
-            .rct-label{font-size:10px;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:3px;}
-            .rct-amount{font-size:15px;font-weight:700;color:#1B2A4A;}
-            .rct-pct{font-size:10px;color:#aaa;}
-            .rpt-total-box{background:#1B2A4A;color:#fff;border-radius:6px;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;margin-top:16px;}
-            .rtb-label{font-size:13px;font-weight:600;letter-spacing:.04em;}
-            .rtb-amount{font-size:22px;font-weight:700;}
-            .rpt-sig{display:flex;justify-content:space-between;margin-top:60px;}
-            .rpt-sig-block{width:42%;text-align:center;border-top:1px solid #000;padding-top:6px;font-size:11px;color:#333;}
-            @media print { body { padding: 20px; } }
-        </style>
-    </head><body>${html}</body></html>`);
-    printWin.document.close();
-    printWin.focus();
-    setTimeout(() => { printWin.print(); }, 400);
-};
-
-
-/* ══════════════════════════════════════════
-   REPORTE PDF DE ESTADÍSTICAS
-══════════════════════════════════════════ */
-window.generateStatsPDF = async () => {
-
-    // ── Capture chart images before opening new window ──────────
-    function chartImg(id) {
-        const canvas = document.getElementById(id);
-        if (!canvas) return null;
-        try { return canvas.toDataURL('image/png'); } catch(e) { return null; }
-    }
-
-    const imgExpM    = chartImg('chart-expenses-monthly');
-    const imgExpD    = chartImg('chart-donut-expenses');
-    const imgHrsM    = chartImg('chart-hours-monthly');
-    const imgCostD   = chartImg('chart-donut-cost');
-
-    // ── Collect current KPI values ───────────────────────────────
-    const year  = document.getElementById('stats-year')?.value || '';
-    const month = document.getElementById('stats-month');
-    const monthLabel = month ? month.options[month.selectedIndex]?.text : 'Todo el año';
-    const kpiExp     = document.getElementById('kpi-expenses')?.textContent  || '—';
-    const kpiHrs     = document.getElementById('kpi-hours')?.textContent     || '—';
-    const kpiCost    = document.getElementById('kpi-extra-cost')?.textContent || '—';
-    const kpiTechs   = document.getElementById('kpi-techs')?.textContent     || '—';
-
-    // ── Collect rankings ─────────────────────────────────────────
-    function getRanking(id) {
-        const ul = document.getElementById(id);
-        if (!ul) return [];
-        return Array.from(ul.querySelectorAll('li')).map(li => {
-            const name = li.querySelector('.s-rank-name')?.textContent?.trim() || '—';
-            const val  = li.querySelector('.s-rank-val')?.textContent?.trim()  || '—';
-            return { name, val };
-        });
-    }
-    const rankExp  = getRanking('rank-expenses');
-    const rankHrs  = getRanking('rank-hours');
-    const rankCost = getRanking('rank-cost');
-
-    const medals = ['🥇','🥈','🥉'];
-
-    function rankTable(data, title) {
-        if (!data.length) return `<p style="color:#888;font-size:12px">Sin datos</p>`;
-        return `<table style="width:100%;border-collapse:collapse;font-size:12px">
-            <thead><tr style="background:#1B2A4A;color:#fff">
-                <th style="padding:6px 8px;text-align:left">#</th>
-                <th style="padding:6px 8px;text-align:left">Técnico</th>
-                <th style="padding:6px 8px;text-align:right">Total</th>
-            </tr></thead>
-            <tbody>
-            ${data.map((r,i) => `<tr style="background:${i%2===0?'#fff':'#f5f7fb'}">
-                <td style="padding:5px 8px">${medals[i]||i+1}</td>
-                <td style="padding:5px 8px;font-weight:600">${r.name}</td>
-                <td style="padding:5px 8px;text-align:right">${r.val}</td>
-            </tr>`).join('')}
-            </tbody>
-        </table>`;
-    }
-
-    // ── Build HTML ───────────────────────────────────────────────
-    const periodText = monthLabel === 'Todo el año' ? `Año ${year}` : `${monthLabel} ${year}`;
-
-    let html = `
-    <div style="border-bottom:3px solid #1B2A4A;padding-bottom:14px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-start">
-        <div>
-            <h1 style="font-size:22px;color:#1B2A4A;margin:0 0 3px">Multiequipos</h1>
-            <p style="font-size:12px;color:#666;margin:0">Reporte de Estadísticas del Equipo</p>
-        </div>
-        <div style="text-align:right">
-            <h2 style="font-size:15px;text-transform:uppercase;letter-spacing:1px;color:#1B2A4A;margin:0 0 3px">Reporte Ejecutivo</h2>
-            <p style="font-size:11px;color:#666;margin:0">Periodo: ${periodText}</p>
-            <p style="font-size:11px;color:#666;margin:0">Emitido: ${new Date().toLocaleDateString('es-CR')}</p>
-        </div>
-    </div>
-
-    <!-- KPIs -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">
-        ${[
-            ['Total Gastos', kpiExp, '#1B2A4A'],
-            ['Horas Extra', kpiHrs, '#c0272d'],
-            ['Costo Extra', kpiCost, '#1d7a4f'],
-            ['Técnicos Activos', kpiTechs, '#7c3aed']
-        ].map(([label, val, color]) => `
-        <div style="border:1px solid #dde4ef;border-top:3px solid ${color};border-radius:6px;padding:12px 14px;background:#fff">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:4px">${label}</div>
-            <div style="font-size:18px;font-weight:700;color:#1B2A4A">${val}</div>
-        </div>`).join('')}
-    </div>
-
-    <!-- Charts row 1 -->
-    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1B2A4A;border-bottom:1px solid #dde4ef;padding-bottom:5px;margin-bottom:12px">Gastos Mensuales por Técnico</div>
-    <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:20px;align-items:center">
-        ${imgExpM ? `<img src="${imgExpM}" style="width:100%;border-radius:6px;border:1px solid #eee">` : '<div style="height:180px;background:#f5f7fb;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:12px">Sin datos</div>'}
-        ${imgExpD ? `<img src="${imgExpD}" style="width:100%;border-radius:6px;border:1px solid #eee">` : '<div style="height:180px;background:#f5f7fb;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:12px">Sin datos</div>'}
-    </div>
-
-    <!-- Charts row 2 -->
-    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1B2A4A;border-bottom:1px solid #dde4ef;padding-bottom:5px;margin-bottom:12px">Horas Extra y Costo Salarial</div>
-    <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:20px;align-items:center">
-        ${imgHrsM ? `<img src="${imgHrsM}" style="width:100%;border-radius:6px;border:1px solid #eee">` : '<div style="height:160px;background:#f5f7fb;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:12px">Sin datos</div>'}
-        ${imgCostD ? `<img src="${imgCostD}" style="width:100%;border-radius:6px;border:1px solid #eee">` : '<div style="height:160px;background:#f5f7fb;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:12px">Sin datos</div>'}
-    </div>
-
-    <!-- Rankings -->
-    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1B2A4A;border-bottom:1px solid #dde4ef;padding-bottom:5px;margin-bottom:12px">Rankings del Período</div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px">
-        <div>
-            <div style="font-size:11px;font-weight:700;color:#1B2A4A;margin-bottom:6px">💰 Gastos</div>
-            ${rankTable(rankExp)}
-        </div>
-        <div>
-            <div style="font-size:11px;font-weight:700;color:#1B2A4A;margin-bottom:6px">⏱ Horas Extra</div>
-            ${rankTable(rankHrs)}
-        </div>
-        <div>
-            <div style="font-size:11px;font-weight:700;color:#1B2A4A;margin-bottom:6px">💼 Costo Extra</div>
-            ${rankTable(rankCost)}
-        </div>
-    </div>
-
-    <!-- Footer -->
-    <div style="border-top:1px solid #dde4ef;padding-top:10px;display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#aaa">
-        <span>Multiequipos — Sistema de Nómina</span>
-        <span>Reporte generado el ${new Date().toLocaleDateString('es-CR')} a las ${new Date().toLocaleTimeString('es-CR',{hour:'2-digit',minute:'2-digit'})}</span>
-    </div>`;
-
-    // ── Open print window ────────────────────────────────────────
-    const w = window.open('','_blank','width=1000,height=750');
-    w.document.write(`<!DOCTYPE html><html><head>
-        <meta charset="UTF-8">
-        <title>Estadísticas ${periodText} — Multiequipos</title>
-        <style>
-            * { box-sizing:border-box; margin:0; padding:0; }
-            body { font-family:Arial,sans-serif; font-size:12px; color:#222; padding:28px 36px; }
-            @media print {
-                body { padding:16px; }
-                @page { margin:1cm; }
+            if (per===0) {
+                const ds=cur.toISOString().split('T')[0];
+                if (!excl.includes(ds)) push(ds);
+                job.checklist.forEach(p=>{ if (!periods.find(x=>x.date===p.date)) periods.push(p); });
+            } else {
+                while (cur<=endF) {
+                    const ds=cur.toISOString().split('T')[0];
+                    if (!excl.includes(ds)) push(ds);
+                    cur.setMonth(cur.getMonth()+per);
+                }
+                job.checklist.forEach(p=>{ if (!periods.find(x=>x.date===p.date)) periods.push(p); });
             }
-        </style>
-    </head><body>${html}</body></html>`);
-    w.document.close();
-    w.focus();
-    setTimeout(() => w.print(), 600);
-};
+            periods.sort((a,b)=>new Date(a.date)-new Date(b.date));
+            return periods;
+        },
+        toggleCheck: (jobId,date,checked) => {
+            const job=DB.getById(jobId);
+            if (!job.checklist) job.checklist=[];
+            const idx=job.checklist.findIndex(p=>p.date===date);
+            const item={date,completed:checked,comment:idx>-1?job.checklist[idx].comment:"",dateCompleted:checked?new Date().toISOString().split('T')[0]:null};
+            if (idx>-1) job.checklist[idx]=item; else job.checklist.push(item);
+            job.checklist.sort((a,b)=>new Date(a.date)-new Date(b.date));
+            DB.update(job,jobId);
+            JobModal.renderChecklist(job); JobModal.renderHistory(job);
+        },
+        saveComment: (jobId,date,comment) => {
+            const job=DB.getById(jobId);
+            const idx=job.checklist.findIndex(p=>p.date===date);
+            if (idx>-1) { job.checklist[idx].comment=comment; DB.update(job,jobId); Toast.show('Comentario guardado','success'); }
+        }
+    };
 
-
-/* ══════════════════════════════════════════
-   REASIGNACIÓN MASIVA DE GENERALES → S0000
-══════════════════════════════════════════ */
-window.bulkReassignGeneral = async () => {
-    // Find the S0000 OT in Firestore
-    await ensureOTData();
-    const s0000 = otData.find(x => x.number === 'S0000');
-    if (!s0000) {
-        showToast('No se encontró la OT S0000. Verifique que esté creada.', 'error');
-        return;
-    }
-
-    if (!confirm(`¿Reasignar TODOS los gastos generales a la OT ${s0000.number} — ${s0000.client}?\n\nEsta acción no se puede deshacer.`)) return;
-
-    // Fetch all GENERAL expense records
-    const allRecs = (await getDocs(collection(db, 'records'))).docs.map(d => ({id: d.id, ...d.data()}));
-    const generals = allRecs.filter(r =>
-        r.type === 'expense' && (r.otId === 'GENERAL' || !r.otId)
-    );
-
-    if (!generals.length) {
-        showToast('No hay gastos generales para reasignar', 'info');
-        return;
-    }
-
-    // Show progress
-    const progressEl = document.getElementById('bulk-reassign-progress');
-    const progressText = document.getElementById('bulk-progress-text');
-    const progressBar = document.getElementById('bulk-progress-bar');
-    progressEl.classList.remove('hidden');
-    document.getElementById('btn-bulk-reassign').disabled = true;
-
-    let done = 0;
-    const total = generals.length;
-
-    // Process in batches of 500 (Firestore batch limit)
-    const BATCH_SIZE = 400;
-    for (let i = 0; i < generals.length; i += BATCH_SIZE) {
-        const batchGroup = generals.slice(i, i + BATCH_SIZE);
-        const batch = writeBatch(db);
-        batchGroup.forEach(r => {
-            batch.update(doc(db, 'records', r.id), {
-                otId: s0000.id,
-                otNumber: s0000.number,
-                otClient: s0000.client,
-                otDescription: s0000.description || ''
+    /* DASHBOARD */
+    const Dashboard = {
+        root: name => name ? name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim().split(/\s+/)[0] : 'x',
+        populateClientFilter: () => {
+            const sel=document.getElementById('filter-client'), cur=sel.value;
+            const roots=new Set(); state.jobs.forEach(j=>roots.add(Dashboard.root(j.name)));
+            sel.innerHTML='<option value="all">Todos los clientes</option>';
+            Array.from(roots).sort().forEach(r=>{ const o=document.createElement('option'); o.value=r; o.textContent=r.charAt(0).toUpperCase()+r.slice(1); sel.appendChild(o); });
+            if (Array.from(sel.options).some(o=>o.value===cur)) sel.value=cur;
+        },
+        getData: () => {
+            const fc=document.getElementById('filter-client').value, ft=document.getElementById('filter-type').value;
+            const today=new Date().toISOString().split('T')[0];
+            let dItems=[],cItems=[],tot=0,comp=0,del=0,pend=0;
+            const yr=new Date().getFullYear(), mData=new Array(12).fill(0);
+            const now=new Date(), d7=new Date(),d30=new Date(),dy=new Date(yr,0,1);
+            d7.setDate(d7.getDate()-7); d30.setDate(d30.getDate()-30);
+            let v7=0,v30=0,vy=0;
+            state.jobs.forEach(job=>{
+                const isP=(parseInt(job.periodMonths)||0)>0;
+                if (ft==='periodic'&&!isP) return;
+                if (ft==='unique'&&isP) return;
+                if (fc!=='all'&&Dashboard.root(job.name)!==fc) return;
+                JL.generatePeriods(job).forEach(p=>{
+                    tot++;
+                    const pd=new Date(p.date+'T00:00:00');
+                    if (p.completed) {
+                        comp++; cItems.push({job,period:p});
+                        if (pd>=d7&&pd<=now) v7++;
+                        if (pd>=d30&&pd<=now) v30++;
+                        if (pd>=dy&&pd<=now) vy++;
+                        if (pd.getFullYear()===yr) mData[pd.getMonth()]++;
+                    } else {
+                        if (p.date<today) { del++; dItems.push({job,period:p}); } else pend++;
+                    }
+                });
             });
-        });
-        await batch.commit();
-        done += batchGroup.length;
-        progressText.textContent = `${done} / ${total}`;
-        progressBar.style.width = `${(done/total)*100}%`;
-    }
+            return { stats:{pct:tot>0?Math.round(comp/tot*100):0,comp,del,pend,v7,v30,vy}, lists:{dItems,cItems}, chart:mData };
+        },
+        renderSummary: () => {
+            const d=Dashboard.getData();
+            document.getElementById('stat-percent').innerText   = d.stats.pct+'%';
+            document.getElementById('stat-completed').innerText = d.stats.comp;
+            document.getElementById('stat-delayed').innerText   = d.stats.del;
+            document.getElementById('stat-pending').innerText   = d.stats.pend;
+            document.getElementById('stat-visits-7').innerText   = d.stats.v7;
+            document.getElementById('stat-visits-30').innerText  = d.stats.v30;
+            document.getElementById('stat-visits-year').innerText = d.stats.vy;
+            Dashboard.updateChart(d.chart);
+        },
+        updateChart: mData => {
+            const ctx=document.getElementById('monthlyChart').getContext('2d');
+            if (state.chartInstance) state.chartInstance.destroy();
+            document.getElementById('chart-year').innerText = new Date().getFullYear();
+            state.chartInstance = new Chart(ctx,{
+                type:'bar',
+                data:{ labels:['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'], datasets:[{label:'Trabajos',data:mData,backgroundColor:'rgba(192,57,43,.7)',hoverBackgroundColor:'rgba(232,52,29,.9)',borderRadius:4,borderSkipped:false}] },
+                options:{ responsive:true, maintainAspectRatio:false,
+                    plugins:{ legend:{display:false}, tooltip:{backgroundColor:'#ffffff',borderColor:'rgba(0,0,0,.12)',borderWidth:1,titleColor:'#1a2030',bodyColor:'#5a6a7e',padding:10,cornerRadius:6} },
+                    scales:{ x:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#5a6a7e',font:{size:11,family:"'IBM Plex Mono'"}}}, y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#5a6a7e',precision:0,font:{size:11,family:"'IBM Plex Mono'"}}} }
+                }
+            });
+        },
+        showList: type => {
+            const d=Dashboard.getData();
+            const list=type==='delayed'?d.lists.dItems:d.lists.cItems;
+            const container=document.getElementById('drilldown-list');
+            document.getElementById('dashboard-summary').classList.add('hidden');
+            document.getElementById('dashboard-drilldown').classList.remove('hidden');
+            document.getElementById('drilldown-title').innerText=type==='delayed'?'Trabajos Retrasados':'Trabajos Realizados';
+            container.innerHTML='';
+            if (!list.length) { container.innerHTML='<div class="empty"><i class="fas fa-inbox"></i><p>Sin registros.</p></div>'; return; }
+            list.forEach(item=>{
+                const card=document.createElement('div');
+                card.className=`job-card ${type==='delayed'?'delayed':'completed'}`;
+                card.innerHTML=`<div><div class="jc-name">${item.job.name}</div><div class="jc-meta"><i class="fas fa-calendar-alt"></i>${item.period.date}</div><div class="jc-meta"><i class="fas fa-map-marker-alt"></i>${item.job.location||'—'}</div></div>${item.period.comment?`<div style="font-size:.75rem;color:var(--text-3);font-style:italic;background:var(--bg-input);padding:.5rem .65rem;border-radius:4px;border-left:2px solid var(--border-med)">"${item.period.comment}"</div>`:''}`;
+                card.onclick=()=>JobModal.open(item.job.id);
+                container.appendChild(card);
+            });
+        },
+        showSummary: () => {
+            document.getElementById('dashboard-drilldown').classList.add('hidden');
+            document.getElementById('dashboard-summary').classList.remove('hidden');
+            Dashboard.renderSummary();
+        },
+        render: () => { Dashboard.showSummary(); Dashboard.populateClientFilter(); }
+    };
 
-    // Done
-    progressEl.classList.add('hidden');
-    document.getElementById('btn-bulk-reassign').disabled = false;
-    showToast(`✓ ${total} gastos reasignados a ${s0000.number} exitosamente`, 'success');
-    await window.loadUnclassified();
-};
-
-
-/* ══════════════════════════════════════════
-   GESTIÓN DE GASTOS — DOS VISTAS
-══════════════════════════════════════════ */
-
-window.switchGGTab = function(tab) {
-    const viewU = document.getElementById('gg-view-unclassified');
-    const viewA = document.getElementById('gg-view-all');
-    const tabU  = document.getElementById('gg-tab-unclassified');
-    const tabA  = document.getElementById('gg-tab-all');
-    const active   = 'border-bottom:2px solid var(--navy-800);color:var(--navy-800);margin-bottom:-2px';
-    const inactive = 'border-bottom:2px solid transparent;color:var(--text-3);margin-bottom:-2px';
-
-    if (tab === 'unclassified') {
-        viewU.style.display = ''; viewA.style.display = 'none';
-        tabU.style.cssText += active; tabA.style.cssText += inactive;
-        window.loadUnclassified();
-    } else {
-        viewU.style.display = 'none'; viewA.style.display = '';
-        tabA.style.cssText += active; tabU.style.cssText += inactive;
-        // Populate tech filter
-        const techSel = document.getElementById('gg-filter-tech');
-        if (techSel && techSel.options.length <= 1) {
-            usersData.forEach(u => {
-                const o = document.createElement('option');
-                o.value = u.id; o.textContent = u.fullName;
-                techSel.appendChild(o);
+    /* APP */
+    const App = {
+        init: () => { App.bindEvents(); Auth.check(); },
+        show: () => App.switchView('dashboard'),
+        switchView: v => {
+            state.currentView=v;
+            ['dashboard','jobs','calendar'].forEach(n=>{
+                document.getElementById(`btn-view-${n}`).classList.toggle('active',n===v);
+                document.getElementById(`view-${n}`).classList.toggle('hidden',n!==v);
+            });
+            const ba=document.getElementById('btn-add');
+            if (v==='dashboard') { ba.classList.add('hidden'); Dashboard.render(); }
+            else if (v==='jobs') { ba.classList.remove('hidden'); ba.onclick=()=>ModalForm.open(); document.getElementById('job-search').value=''; App.renderJobList(); }
+            else if (v==='calendar') { ba.classList.add('hidden'); if(!state.calendar) App.initCalendar(); requestAnimationFrame(()=>{ if(state.calendar){state.calendar.render();App.renderCalendar();} }); }
+        },
+        initCalendar: () => {
+            state.calendar=new FullCalendar.Calendar(document.getElementById('view-calendar'),{
+                initialView:'dayGridMonth', locale:'es', editable:true, height:'100%',
+                headerToolbar:{left:'prev,next today',center:'title',right:'dayGridMonth,timeGridWeek'},
+                eventDrop: info => {
+                    const parts=info.event.id.split('|'), nd=info.event.startStr, od=parts[2];
+                    if (parts[0]==='job') {
+                        const job=DB.getById(parts[1]);
+                        if (job) {
+                            if(!job.checklist) job.checklist=[]; if(!job.excludedDates) job.excludedDates=[];
+                            const idx=job.checklist.findIndex(p=>p.date===od);
+                            if (idx>-1) job.checklist[idx].date=nd;
+                            else { job.checklist.push({date:nd,completed:false,comment:"",dateCompleted:null}); if(!job.excludedDates.includes(od)) job.excludedDates.push(od); }
+                            job.checklist.sort((a,b)=>new Date(a.date)-new Date(b.date));
+                            DB.update(job,parts[1]).then(()=>{Toast.show('Fecha reprogramada','success');App.renderCalendar();});
+                        }
+                    }
+                },
+                eventClick: info => { const jobId=info.event.extendedProps.jobId||info.event.id.split('|')[1]; if(jobId) JobModal.open(jobId); }
+            });
+            state.calendar.render();
+        },
+        renderCalendar: () => {
+            if (!state.calendar) return;
+            const events=[];
+            state.jobs.forEach(j=>{
+                const periods=JL.generatePeriods(j), dur=parseInt(j.durationDays)||1;
+                periods.forEach(p=>{
+                    const bg=p.completed?'#1a9e6a':'#C0392B';
+                    if (dur<=1) {
+                        events.push({id:`job|${j.id}|${p.date}`,title:j.name,start:p.date,allDay:true,backgroundColor:bg,borderColor:bg,className:'fc-event-job'});
+                    } else {
+                        for (let d=0;d<dur;d++) {
+                            const day=new Date(p.date+'T00:00:00'); day.setDate(day.getDate()+d);
+                            const ds=day.toISOString().split('T')[0];
+                            const iF=d===0,iL=d===dur-1;
+                            let cls='fc-event-job fc-multiday-part'+(iF?' fc-multiday-first':iL?' fc-multiday-last':' fc-multiday-mid');
+                            events.push({id:`job|${j.id}|${p.date}|d${d}`,title:j.name,start:ds,allDay:true,backgroundColor:bg,borderColor:bg,className:cls,extendedProps:{jobId:j.id,originDate:p.date}});
+                        }
+                    }
+                });
+            });
+            state.calendar.removeAllEvents(); state.calendar.addEventSource(events);
+        },
+        bindEvents: () => {
+            document.getElementById('login-form').addEventListener('submit',e=>{ e.preventDefault(); Auth.login(document.getElementById('username').value,document.getElementById('password').value); });
+            document.getElementById('btn-logout').addEventListener('click',Auth.logout);
+            ['dashboard','jobs','calendar'].forEach(v=>document.getElementById(`btn-view-${v}`).addEventListener('click',()=>App.switchView(v)));
+            document.querySelectorAll('.close-modal').forEach(b=>b.addEventListener('click',()=>document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.add('hidden'))));
+            document.getElementById('filter-client').addEventListener('change',Dashboard.renderSummary);
+            document.getElementById('filter-type').addEventListener('change',Dashboard.renderSummary);
+            document.getElementById('card-completed').addEventListener('click',()=>Dashboard.showList('completed'));
+            document.getElementById('card-delayed').addEventListener('click',()=>Dashboard.showList('delayed'));
+            document.getElementById('btn-back-dashboard').addEventListener('click',Dashboard.showSummary);
+            document.getElementById('job-search').addEventListener('input',e=>App.renderJobList(e.target.value.toLowerCase()));
+            document.getElementById('btn-save-job').addEventListener('click',()=>ModalForm.save());
+            document.querySelectorAll('#modal-job-details .tab-btn').forEach(btn=>btn.addEventListener('click',e=>{
+                document.querySelectorAll('#modal-job-details .tab-btn').forEach(b=>b.classList.remove('active'));
+                document.querySelectorAll('#modal-job-details .tab-content').forEach(c=>c.classList.add('hidden'));
+                e.target.classList.add('active'); document.getElementById(e.target.dataset.tab).classList.remove('hidden');
+            }));
+        },
+        renderJobList: (filter='') => {
+            const c=document.getElementById('job-list-container'); c.innerHTML='';
+            const filtered=state.jobs.filter(j=>!filter||j.name.toLowerCase().includes(filter));
+            document.getElementById('jobs-count-label').innerText=`${filtered.length} trabajo${filtered.length!==1?'s':''}`;
+            if (!filtered.length) { c.innerHTML='<div class="empty"><i class="fas fa-briefcase"></i><p>No se encontraron trabajos.</p></div>'; return; }
+            filtered.forEach(j=>{
+                const ps=JL.generatePeriods(j), tot=ps.length, done=ps.filter(p=>p.completed).length, pct=tot?Math.round(done/tot*100):0;
+                const isP=(parseInt(j.periodMonths)||0)>0, dur=parseInt(j.durationDays)||1;
+                const card=document.createElement('div'); card.className='job-card';
+                card.innerHTML=`<div><div class="jc-name">${j.name}</div><div class="jc-meta"><i class="fas fa-map-marker-alt"></i>${j.location||'—'}</div><div class="jc-meta" style="margin-top:.3rem;gap:.3rem"><span class="badge ${isP?'badge-amber':'badge-blue'}"><i class="fas ${isP?'fa-sync':'fa-flag-checkered'}"></i>${isP?`Cada ${j.periodMonths} mes(es)`:'Visita única'}</span>${dur>1?`<span class="badge badge-blue"><i class="fas fa-calendar-week"></i>${dur} días</span>`:''}</div></div><div><div class="jc-progress-wrap"><div class="jc-progress-fill" style="width:${pct}%"></div></div><div class="jc-progress-txt">${done}/${tot} completados · ${pct}%</div></div>`;
+                card.onclick=()=>JobModal.open(j.id);
+                c.appendChild(card);
             });
         }
-        window.loadAllExpenses();
-    }
-};
+    };
 
-window.loadAllExpenses = async () => {
-    await ensureOTData();
-    const techFilter = document.getElementById('gg-filter-tech')?.value || 'all';
-    const fromDate   = document.getElementById('gg-filter-from')?.value || '';
-    const toDate     = document.getElementById('gg-filter-to')?.value   || '';
-
-    const allRecs = (await getDocs(collection(db, 'records'))).docs.map(d => ({id:d.id,...d.data()}));
-    const exps = allRecs.filter(r => {
-        if (r.type !== 'expense') return false;
-        if (techFilter !== 'all' && r.userId !== techFilter) return false;
-        if (fromDate && r.date < fromDate) return false;
-        if (toDate   && r.date > toDate)   return false;
-        return true;
-    }).sort((a,b) => new Date(b.date) - new Date(a.date));
-
-    document.getElementById('gg-all-count').textContent = `${exps.length} registro${exps.length!==1?'s':''} encontrado${exps.length!==1?'s':''}`;
-
-    // Build OT options
-    let otOpts = '';
-    otData.forEach(ot => {
-        otOpts += `<option value="${ot.id}" data-number="${ot.number}" data-client="${ot.client}">${ot.number} — ${ot.client}</option>`;
-    });
-
-    const catOpts = `<option value="">Seleccione...</option>
-        <option value="Materiales">Materiales</option>
-        <option value="Insumos">Insumos</option>
-        <option value="Herramientas">Herramientas</option>
-        <option value="Repuestos">Repuestos</option>
-        <option value="Combustible">Combustible</option>
-        <option value="Viaticos">Viáticos</option>
-        <option value="Hospedaje">Hospedaje</option>
-        <option value="Parqueo">Parqueo</option>
-        <option value="Peajes">Peajes</option>
-        <option value="Otros">Otros</option>`;
-
-    const tbody = document.querySelector('#all-expenses-table tbody');
-
-    if (!exps.length) {
-        tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="icon">🧾</div><p>Sin gastos para los filtros seleccionados</p></div></td></tr>`;
-        return;
-    }
-
-    tbody.innerHTML = exps.map(r => {
-        const tech = usersData.find(u => u.id === r.userId);
-        const techName = tech ? tech.fullName.split(' ').slice(0,2).join(' ') : '—';
-        const paid = r.status === 'paid';
-        const rawType = r.expenseType || '';
-        const isOtros = rawType.startsWith('Otros:');
-        const typeVal = isOtros ? 'Otros' : rawType;
-
-        return `<tr id="ggrow-${r.id}">
-            <td>${fmtDate(r.date)}</td>
-            <td style="font-weight:600;color:var(--text-1)">${techName}</td>
-            <td style="font-size:.78rem">${r.invoiceNum||'—'}</td>
-            <td>${r.store||'—'}</td>
-            <td style="font-weight:600">${fmt(r.amount)}</td>
-            <td><span class="badge ${paid?'badge-paid':'badge-pending'}">${paid?'Pagado':'Pendiente'}</span></td>
-            <td>
-                <select class="form-control" id="gg-ot-${r.id}" style="font-size:.78rem;padding:.4rem .6rem">
-                    ${otOpts}
-                </select>
-            </td>
-            <td>
-                <select class="form-control" id="gg-cat-${r.id}" style="font-size:.78rem;padding:.4rem .6rem">
-                    ${catOpts}
-                </select>
-            </td>
-            <td>
-                <button type="button" class="btn btn-success btn-sm" onclick="window.saveAllExpense('${r.id}')">
-                    ✓ Guardar
-                </button>
-            </td>
-        </tr>`;
-    }).join('');
-
-    // Pre-select current values
-    exps.forEach(r => {
-        const otSel  = document.getElementById(`gg-ot-${r.id}`);
-        const catSel = document.getElementById(`gg-cat-${r.id}`);
-        if (otSel && r.otId) otSel.value = r.otId;
-        if (catSel) {
-            const rawType = r.expenseType || '';
-            catSel.value = rawType.startsWith('Otros:') ? 'Otros' : rawType;
-        }
-    });
-};
-
-window.saveAllExpense = async (recordId) => {
-    const otSel  = document.getElementById(`gg-ot-${recordId}`);
-    const catSel = document.getElementById(`gg-cat-${recordId}`);
-    if (!otSel || !catSel) return;
-
-    const otId   = otSel.value;
-    const selOpt = otSel.options[otSel.selectedIndex];
-    const otNumber      = selOpt ? (selOpt.dataset.number || '') : '';
-    const otClient      = selOpt ? (selOpt.dataset.client || '') : '';
-    const otDescription = otId ? (otData.find(x=>x.id===otId)?.description||'') : '';
-    const expType = catSel.value;
-
-    if (!otId)    { showToast('Seleccione una orden de trabajo', 'warning'); return; }
-    if (!expType) { showToast('Seleccione un tipo de gasto', 'warning'); return; }
-
-    try {
-        await updateDoc(doc(db, 'records', recordId), {
-            otId, otNumber, otClient, otDescription, expenseType: expType
-        });
-        // Animate row to green briefly
-        const row = document.getElementById(`ggrow-${recordId}`);
-        if (row) {
-            row.style.transition = 'background .3s';
-            row.style.background = 'var(--green-bg)';
-            setTimeout(() => { row.style.background = ''; }, 1200);
-        }
-        showToast('Gasto actualizado correctamente', 'success');
-    } catch(e) {
-        showToast('Error al guardar: ' + e.message, 'error');
-    }
-};
-
-
-/* ══════════════════════════════════════════
-   HISTORIAL DE TÉCNICOS ELIMINADOS
-══════════════════════════════════════════ */
-
-window.loadDeletedUsers = async () => {
-    const snap = await getDocs(collection(db, 'deletedUsers'));
-    const deleted = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-        .sort((a,b) => new Date(b.deletedAt) - new Date(a.deletedAt));
-
-    const empty = document.getElementById('deleted-users-empty');
-    const wrap  = document.getElementById('deleted-users-wrap');
-    const tbody = document.getElementById('deleted-users-body');
-
-    if (!deleted.length) {
-        empty.classList.remove('hidden');
-        wrap.style.display = 'none';
-        return;
-    }
-
-    empty.classList.add('hidden');
-    wrap.style.display = '';
-
-    tbody.innerHTML = deleted.map(u => {
-        const deletedDate = u.deletedAt ? fmtDate(u.deletedAt.split('T')[0]) : '—';
-        return `<tr>
-            <td style="font-weight:600;color:var(--text-1)">${u.fullName}</td>
-            <td style="color:var(--text-3);font-size:.78rem">${u.email}</td>
-            <td>${fmt(u.salary||0)}</td>
-            <td>${u.startDate ? fmtDate(u.startDate) : '—'}</td>
-            <td style="font-size:.78rem;color:var(--text-3)">
-                ${deletedDate}
-                ${u.deletedBy ? `<br><span style="color:var(--text-3)">por ${u.deletedBy}</span>` : ''}
-            </td>
-            <td style="text-align:center">
-                <span style="font-size:.75rem;color:var(--text-3)">
-                    ${u.recordCount||0} registros
-                </span>
-            </td>
-            <td class="actions-cell">
-                <button type="button" class="btn btn-sm btn-success"
-                    onclick="window.restoreUser('${u.id}')">
-                    ↩ Restaurar
-                </button>
-                <button type="button" class="btn btn-sm btn-danger"
-                    onclick="window.permanentDeleteUser('${u.id}','${u.fullName}')">
-                    🗑 Borrar
-                </button>
-            </td>
-        </tr>`;
-    }).join('');
-};
-
-window.restoreUser = async (id) => {
-    const snap = await getDoc(doc(db, 'deletedUsers', id));
-    if (!snap.exists()) { showToast('No se encontró el técnico archivado', 'error'); return; }
-    const u = snap.data();
-
-    if (!confirm(`¿Restaurar a ${u.fullName}?\n\nSe restaurará su perfil. Sus registros históricos ya están disponibles.\n\nNecesitará crear una nueva contraseña para que pueda iniciar sesión.`)) return;
-
-    try {
-        // Ask for new password
-        const newPass = prompt(`Nueva contraseña temporal para ${u.fullName}:\n(mínimo 6 caracteres)`);
-        if (!newPass || newPass.length < 6) { showToast('Contraseña inválida — mínimo 6 caracteres', 'warning'); return; }
-
-        // Re-create Firebase Auth account
-        const authResult = await createUserViaAPI(u.email, newPass);
-        if (authResult.error) {
-            // If account already exists in Auth, just restore Firestore doc
-            if (authResult.error.message !== 'EMAIL_EXISTS') {
-                throw new Error(authResult.error.message);
+    /* MODAL FORM */
+    const ModalForm = {
+        open: (id=null) => {
+            document.getElementById('modal-form').classList.remove('hidden');
+            document.getElementById('job-form').reset();
+            document.getElementById('record-id').value=id||'';
+            document.getElementById('modal-title').innerText=id?'Editar Trabajo':'Nuevo Trabajo';
+            if (id) {
+                const d=DB.getById(id);
+                document.getElementById('j-name').value=d.name||'';
+                document.getElementById('j-contact').value=d.contact||'';
+                document.getElementById('j-phone').value=d.phone||'';
+                document.getElementById('j-scope').value=d.scope||'';
+                document.getElementById('j-location').value=d.location||'';
+                document.getElementById('j-additional').value=d.additional||'';
+                document.getElementById('j-start-date').value=d.startDate||'';
+                document.getElementById('j-period').value=d.periodMonths??1;
+                document.getElementById('j-duration').value=d.durationDays||1;
+            } else {
+                document.getElementById('j-start-date').value=new Date().toISOString().split('T')[0];
+                document.getElementById('j-period').value=1;
+                document.getElementById('j-duration').value=1;
             }
+        },
+        save: () => {
+            const id=document.getElementById('record-id').value, form=document.getElementById('job-form');
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+            const data={name:document.getElementById('j-name').value,contact:document.getElementById('j-contact').value,phone:document.getElementById('j-phone').value,scope:document.getElementById('j-scope').value,location:document.getElementById('j-location').value,additional:document.getElementById('j-additional').value,startDate:document.getElementById('j-start-date').value,periodMonths:parseInt(document.getElementById('j-period').value)||0,durationDays:parseInt(document.getElementById('j-duration').value)||1};
+            if (id) DB.update({...DB.getById(id),...data},id); else DB.add(data);
+            document.getElementById('modal-form').classList.add('hidden');
         }
+    };
 
-        // Restore user document (use original ID if auth was recreated with same email)
-        const newUid = authResult.localId || id;
-        const { deletedAt, deletedBy, recordCount, vacationCount, ...userData } = u;
-        await setDoc(doc(db, 'users', newUid), {
-            ...userData,
-            restoredAt: new Date().toISOString(),
-            restoredBy: currentUser.fullName || currentUser.email
-        });
+    /* JOB MODAL */
+    const JobModal = {
+        open: id => {
+            const j=DB.getById(id); if(!j) return;
+            document.getElementById('modal-job-details').classList.remove('hidden');
+            document.getElementById('jd-client-name').innerText=j.name;
+            document.getElementById('jd-contact').innerText=j.contact||'—';
+            document.getElementById('jd-location').innerText=j.location||'—';
+            document.getElementById('jd-phone').innerText=j.phone||'—';
+            document.getElementById('jd-scope').innerText=j.scope||'Sin alcance definido.';
+            const addWrap=document.getElementById('jd-additional-wrap');
+            const addEl=document.getElementById('jd-additional');
+            if (j.additional && j.additional.trim()) {
+                addEl.innerText=j.additional;
+                addWrap.style.display='block';
+            } else {
+                addWrap.style.display='none';
+            }
+            const isP=(parseInt(j.periodMonths)||0)>0, dur=parseInt(j.durationDays)||1;
+            document.getElementById('jd-badges').innerHTML=`<span class="badge ${isP?'badge-amber':'badge-blue'}"><i class="fas ${isP?'fa-sync':'fa-flag-checkered'}"></i>${isP?`Cada ${j.periodMonths} mes(es)`:'Visita única'}</span>${dur>1?`<span class="badge badge-blue"><i class="fas fa-calendar-week"></i>${dur} días</span>`:''}`;
+            document.getElementById('jd-period-label').innerText=(isP?`Periodo: ${j.periodMonths} mes(es)`:'Visita única')+(dur>1?` · Duración: ${dur} días`:'');
+            document.getElementById('jd-btn-edit').onclick=()=>{ document.getElementById('modal-job-details').classList.add('hidden'); ModalForm.open(id); };
+            document.getElementById('jd-btn-delete').onclick=()=>{ if(confirm('¿Eliminar este trabajo?')){ DB.delete(id); document.getElementById('modal-job-details').classList.add('hidden'); } };
+            JobModal.renderChecklist(j); JobModal.renderHistory(j);
+        },
+        renderChecklist: j => {
+            const wrap=document.getElementById('jd-checklist-wrapper'); wrap.innerHTML='';
+            const ps=JL.generatePeriods(j);
+            if (!ps.length) { wrap.innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--text-3);font-size:.82rem">Sin fechas programadas.</div>'; return; }
+            ps.forEach(p=>{
+                const item=document.createElement('div'); item.className=`check-item ${p.completed?'done':''}`;
+                item.innerHTML=`<div class="check-row"><input type="checkbox" class="check-box" ${p.completed?'checked':''}><span class="check-date">${p.date}</span><span class="check-badge ${p.completed?'done':'pending'}">${p.completed?'Realizado':'Pendiente'}</span></div>${p.completed?`<div class="comment-wrap"><input type="text" class="comment-input" placeholder="Agregar comentario..." value="${p.comment||''}" data-date="${p.date}"></div>`:''}`;
+                const cb=item.querySelector('.check-box'); cb.onchange=()=>JL.toggleCheck(j.id,p.date,cb.checked);
+                const ci=item.querySelector('.comment-input');
+                if (ci) { ci.onblur=()=>JL.saveComment(j.id,p.date,ci.value); ci.onkeypress=e=>{if(e.key==='Enter')ci.blur();}; }
+                wrap.appendChild(item);
+            });
+        },
+        renderHistory: j => {
+            const list=document.getElementById('jd-history-list'); list.innerHTML='';
+            if (!j.checklist||!j.checklist.filter(p=>p.completed).length) { list.innerHTML='<div style="text-align:center;padding:1rem;color:var(--text-3);font-size:.82rem">Sin visitas registradas aún.</div>'; return; }
+            j.checklist.filter(p=>p.completed).sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(p=>{
+                const item=document.createElement('div'); item.className='history-item';
+                item.innerHTML=`<div class="history-date">${p.date}</div><div class="history-comment">${p.comment||'Sin comentario'}</div>`;
+                list.appendChild(item);
+            });
+        }
+    };
 
-        // Remove from deletedUsers
-        await deleteDoc(doc(db, 'deletedUsers', id));
+    /* TOAST */
+    const Toast = {
+        show: (msg,type='info') => {
+            const c=document.getElementById('toast-container'), t=document.createElement('div');
+            const cls={success:'ts',warning:'tw',info:'ti'};
+            const ico={success:'fa-check-circle',warning:'fa-exclamation-triangle',info:'fa-info-circle'};
+            t.className=`toast ${cls[type]||'ti'}`;
+            t.innerHTML=`<i class="fas ${ico[type]||'fa-info-circle'}"></i><span>${msg}</span>`;
+            c.appendChild(t);
+            setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300);},3000);
+        }
+    };
 
-        showToast(`${u.fullName} restaurado exitosamente. Contraseña temporal: ${newPass}`, 'success');
-        loadAdminData();
-        window.loadDeletedUsers();
-    } catch(e) {
-        showToast('Error al restaurar: ' + e.message, 'error');
-    }
-};
-
-window.permanentDeleteUser = async (id, name) => {
-    if (!confirm(`⚠️ ELIMINAR PERMANENTEMENTE a ${name}.\n\nEsta acción NO se puede deshacer. Sus registros históricos quedarán huérfanos.\n\n¿Está completamente seguro?`)) return;
-    try {
-        await deleteDoc(doc(db, 'deletedUsers', id));
-        showToast(`${name} eliminado permanentemente`, 'success');
-        window.loadDeletedUsers();
-    } catch(e) {
-        showToast('Error: ' + e.message, 'error');
-    }
-};
-
-window.switchTab=id=>{
-    document.querySelectorAll('#technician-panel .card').forEach(el=>el.classList.add('hidden'));
-    document.getElementById(id).classList.remove('hidden');
-    document.querySelectorAll('#technician-panel .tab-btn').forEach(b=>b.classList.remove('active'));
-    event.target.classList.add('active');
-};
-window.switchAdminTab=id=>{
-    document.querySelectorAll('#admin-panel .card').forEach(el=>el.classList.add('hidden'));
-    document.getElementById(id).classList.remove('hidden');
-    document.querySelectorAll('#admin-panel .tab-btn').forEach(b=>b.classList.remove('active'));
-    event.target.classList.add('active');
-    if(id==='admin-validation')window.renderValidationTable();
-    if(id==='admin-vacations')window.renderAdminVacTable();
-    if(id==='admin-stats'){ initStatsYearSelector(); window.loadStats(); }
-    if(id==='admin-ot') window.loadOTTable();
-    if(id==='admin-unclassified'){ window.loadUnclassified(); document.getElementById('gg-unclassified-badge') && (document.getElementById('gg-view-unclassified').style.display='', document.getElementById('gg-view-all').style.display='none'); }
-    if(id==='admin-cost') window.loadCostAnalysis();
-};
-window.closeModal=id=>document.getElementById(id).classList.add('hidden');
-
-checkSession();
+    document.addEventListener('DOMContentLoaded', App.init);
 </script>
-<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/service-worker.js').catch(()=>{});</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+</script>
 </body>
 </html>
