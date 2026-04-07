@@ -14,22 +14,20 @@
     <link rel="apple-touch-icon" href="./logo.png">
     <style>
     :root {
-        /* Primary: Red */
         --blue:       #C0392B;
         --blue-light: #E8341D;
         --blue-dim:   rgba(192,57,43,0.10);
         --blue-glow:  rgba(192,57,43,0.22);
-        /* Danger/alerts still red */
         --red:        #C0392B;
         --red-dim:    rgba(192,57,43,0.10);
         --red-glow:   rgba(192,57,43,0.22);
-        /* Success: kept green */
         --green:      #1a9e6a;
         --green-dim:  rgba(26,158,106,0.12);
-        /* Amber replaced with grey-blue neutral */
         --amber:      #5a6a7e;
         --amber-dim:  rgba(90,106,126,0.12);
-        /* Light mode backgrounds */
+        --install:      #7c3aed;
+        --install-dim:  rgba(124,58,237,0.10);
+        --install-glow: rgba(124,58,237,0.22);
         --bg-base:    #f0f2f5;
         --bg-panel:   #ffffff;
         --bg-card:    #f7f8fa;
@@ -37,7 +35,6 @@
         --bg-input:   #ffffff;
         --border:     rgba(0,0,0,0.08);
         --border-med: rgba(0,0,0,0.14);
-        /* Light mode text */
         --text-1:     #1a2030;
         --text-2:     #5a6a7e;
         --text-3:     #9aa3b0;
@@ -57,8 +54,6 @@
     ::-webkit-scrollbar{width:4px;height:4px}
     ::-webkit-scrollbar-track{background:transparent}
     ::-webkit-scrollbar-thumb{background:var(--border-med);border-radius:2px}
-
-    /* ── LOGIN ── */
     #login-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f0f2f5 0%,#e8ebf0 100%);z-index:9999;overflow:hidden}
     #login-screen::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 15% 15%,rgba(192,57,43,.12) 0%,transparent 65%),radial-gradient(ellipse 50% 50% at 85% 80%,rgba(90,106,126,.08) 0%,transparent 60%);animation:lgPulse 10s ease-in-out infinite alternate}
     #login-screen::after{content:'';position:absolute;inset:0;background-image:repeating-linear-gradient(-45deg,transparent,transparent 40px,rgba(255,255,255,.012) 40px,rgba(255,255,255,.012) 41px);pointer-events:none}
@@ -78,37 +73,28 @@
     .lf-wrap{position:relative}
     .lf-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-3);font-size:.8rem;pointer-events:none;transition:color var(--t)}
     .lf-input{width:100%;padding:.8rem .8rem .8rem 2.4rem;background:#f7f8fa;border:1px solid var(--border-med);border-radius:var(--r-sm);color:var(--text-1);font-family:var(--font-b);font-size:.9rem;transition:all var(--t);-webkit-appearance:none}
-    .lf-input::placeholder{color:var(--text-3)}    .lf-label{color:var(--text-2)!important}
+    .lf-input::placeholder{color:var(--text-3)}
     .lf-input:focus{outline:none;border-color:rgba(192,57,43,.5);background:rgba(192,57,43,.04);box-shadow:0 0 0 3px rgba(192,57,43,.1)}
     .btn-login{width:100%;padding:.85rem;background:var(--red);border:none;border-radius:var(--r-sm);color:#fff;font-family:var(--font-d);font-size:.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.5rem;margin-top:1.5rem;transition:all var(--t);box-shadow:0 4px 16px rgba(192,57,43,.35);letter-spacing:.3px}
     .btn-login:hover{background:var(--blue-light);transform:translateY(-1px);box-shadow:0 6px 24px rgba(192,57,43,.5)}
     #login-error{margin-top:1rem;padding:.65rem .875rem;background:var(--red-dim);border:1px solid var(--red-glow);border-radius:var(--r-sm);color:#ff8a78;font-size:.82rem;display:flex;align-items:center;gap:.5rem}
-
-    /* ── APP SHELL ── */
     #app-container{display:flex;height:100vh;overflow:hidden}
-
-    /* ── SIDEBAR ── */
     #sidebar{width:var(--sidebar-w);background:#2c3442;border-right:none;display:flex;flex-direction:column;align-items:center;padding:1rem 0;gap:.25rem;flex-shrink:0;z-index:10}
     .sb-logo{width:40px;height:40px;background:rgba(192,57,43,.25);border:1px solid rgba(192,57,43,.4);border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;font-size:1rem;color:#ff8570;margin-bottom:1.25rem;flex-shrink:0}
     .sb-nav{display:flex;flex-direction:column;gap:.25rem;width:100%;padding:0 .5rem}
     .nav-btn{width:100%;height:44px;background:none;border:1px solid transparent;border-radius:var(--r-sm);color:rgba(255,255,255,.4);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--t);position:relative}
     .nav-btn:hover{background:rgba(255,255,255,.08);color:rgba(255,255,255,.75);border-color:rgba(255,255,255,.1)}
     .nav-btn.active{background:rgba(192,57,43,.3);border-color:rgba(192,57,43,.5);color:#ff8570}
+    .nav-btn.active-install{background:rgba(124,58,237,.3)!important;border-color:rgba(124,58,237,.5)!important;color:#c4b5fd!important}
     .nav-tip{position:absolute;left:calc(100% + 10px);background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-sm);padding:.3rem .65rem;font-size:.75rem;font-family:var(--font-b);color:var(--text-1);white-space:nowrap;opacity:0;pointer-events:none;transition:opacity var(--t);z-index:100;box-shadow:var(--sh-sm)}
     .nav-btn:hover .nav-tip{opacity:1}
     .sb-spacer{flex:1}
     .sb-bottom{width:100%;padding:0 .5rem;display:flex;flex-direction:column;gap:.25rem}
     .sb-divider{width:32px;height:1px;background:rgba(255,255,255,.12);margin:.5rem auto}
-
-    /* ── MAIN ── */
     #main-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
-
-    /* ── TOPBAR ── */
     #topbar{height:56px;background:var(--bg-panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1.25rem;gap:1rem;flex-shrink:0;box-shadow:0 1px 0 rgba(0,0,0,.06)}
     .topbar-title{font-family:var(--font-d);font-size:1rem;font-weight:800;color:var(--text-1);letter-spacing:-.2px;flex:1}
     .topbar-title span{color:var(--red)}
-
-    /* ── BUTTONS ── */
     .btn{display:inline-flex;align-items:center;gap:.4rem;padding:.45rem .9rem;border-radius:var(--r-sm);border:1px solid transparent;font-family:var(--font-b);font-size:.82rem;font-weight:500;cursor:pointer;transition:all var(--t);white-space:nowrap}
     .btn-primary{background:var(--red);color:#fff;border-color:var(--red);box-shadow:0 2px 8px rgba(192,57,43,.3)}
     .btn-primary:hover{background:var(--blue-light);box-shadow:0 4px 16px rgba(192,57,43,.45)}
@@ -118,28 +104,20 @@
     .btn-danger:hover{background:var(--red);color:#fff;border-color:var(--red)}
     .btn-sm{padding:.3rem .6rem;font-size:.75rem}
     .btn-icon{padding:.45rem;width:34px;height:34px;justify-content:center}
-
-    /* ── VIEW AREA ── */
     #view-area{flex:1;overflow:hidden;position:relative}
     .view-pane{position:absolute;inset:0;overflow-y:auto;padding:1.5rem;animation:vFade .22s ease both;background:var(--bg-base)}
     .view-pane.hidden{display:none!important}
     @keyframes vFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
     #view-calendar{position:absolute;inset:0;background:#f0f2f5}
-
-    /* ── PAGE HEADER ── */
     .page-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:.75rem}
     .ph-left{display:flex;flex-direction:column;gap:2px}
     .page-title{font-family:var(--font-d);font-size:1.4rem;font-weight:800;color:var(--text-1);letter-spacing:-.4px}
     .page-sub{font-size:.78rem;color:var(--text-2);font-family:var(--font-m)}
-
-    /* ── SEARCH ── */
     .search-wrap{position:relative;flex:1;min-width:180px;max-width:320px}
     .search-wrap .si{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-3);font-size:.8rem;pointer-events:none}
     .search-input{width:100%;padding:.5rem .75rem .5rem 2.1rem;background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-sm);color:var(--text-1);font-family:var(--font-b);font-size:.82rem;transition:all var(--t)}
     .search-input::placeholder{color:var(--text-3)}
     .search-input:focus{outline:none;border-color:var(--red-glow);box-shadow:0 0 0 3px rgba(192,57,43,.08)}
-
-    /* ── STAT CARDS ── */
     .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.875rem;margin-bottom:1.25rem}
     .stat-card{background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-md);padding:1.25rem 1.25rem 1rem;position:relative;overflow:hidden;transition:border-color var(--t),transform var(--t);box-shadow:var(--sh-sm)}
     .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
@@ -147,6 +125,7 @@
     .stat-card.green::before{background:var(--green)}
     .stat-card.red::before{background:var(--red)}
     .stat-card.amber::before{background:var(--amber)}
+    .stat-card.purple::before{background:var(--install)}
     .stat-card.clickable{cursor:pointer}
     .stat-card.clickable:hover{border-color:var(--border-med);transform:translateY(-2px);box-shadow:var(--sh-sm)}
     .stat-icon{width:32px;height:32px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:.85rem;margin-bottom:.875rem}
@@ -154,39 +133,31 @@
     .stat-card.green .stat-icon{background:var(--green-dim);color:var(--green)}
     .stat-card.red   .stat-icon{background:var(--red-dim);color:#ff8a78}
     .stat-card.amber .stat-icon{background:rgba(90,106,126,.12);color:#5a6a7e}
+    .stat-card.purple .stat-icon{background:var(--install-dim);color:var(--install)}
     .stat-value{font-family:var(--font-d);font-size:2rem;font-weight:800;line-height:1;margin-bottom:.3rem;letter-spacing:-1px}
     .stat-card.blue  .stat-value{color:var(--blue-light)}
     .stat-card.green .stat-value{color:var(--green)}
     .stat-card.red   .stat-value{color:#ff8a78}
     .stat-card.amber .stat-value{color:#4a5568}
+    .stat-card.purple .stat-value{color:var(--install)}
     .stat-label{font-size:.72rem;color:var(--text-2);text-transform:uppercase;letter-spacing:.8px;font-weight:500}
     .stat-hint{font-size:.68rem;color:var(--text-3);margin-top:.4rem;font-family:var(--font-m)}
-
-    /* ── PANELS ── */
     .panel{background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-md);overflow:hidden;margin-bottom:1.25rem;box-shadow:var(--sh-sm)}
     .panel-hdr{padding:.875rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:.75rem}
     .panel-title{font-family:var(--font-d);font-size:.85rem;font-weight:700;color:var(--text-1);letter-spacing:-.2px}
     .panel-body{padding:1.25rem}
-
-    /* ── FILTERS ── */
     .filters-row{display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1.25rem}
     .fg{display:flex;flex-direction:column;gap:.3rem;flex:1;min-width:140px}
     .fg-label{font-size:.68rem;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.8px}
     .fg-select{padding:.5rem .75rem;background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-sm);color:var(--text-1);font-family:var(--font-b);font-size:.82rem;cursor:pointer;transition:all var(--t);-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a6a7e'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:2rem}
     .fg-select:focus{outline:none;border-color:var(--red-glow);box-shadow:0 0 0 3px rgba(192,57,43,.08)}
-
-    /* ── PERIOD TABLE ── */
     .ptable{width:100%;border-collapse:collapse}
     .ptable tr{border-bottom:1px solid var(--border)}
     .ptable tr:last-child{border-bottom:none}
     .ptable td{padding:.75rem 0;font-size:.82rem}
     .ptable td:first-child{color:var(--text-2)}
     .ptable td:last-child{text-align:right;font-family:var(--font-m);font-weight:500;color:var(--text-1);font-size:.9rem}
-
-    /* ── CHART ── */
     .chart-wrap{position:relative;height:240px}
-
-    /* ── JOB GRID ── */
     .job-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.875rem}
     .job-card{background:#ffffff;border:1px solid var(--border-med);border-left:3px solid var(--red);border-radius:var(--r-md);padding:1.1rem 1.1rem .9rem;cursor:pointer;transition:all var(--t);display:flex;flex-direction:column;gap:.75rem;box-shadow:var(--sh-sm)}
     .job-card:hover{border-color:rgba(192,57,43,.3);border-left-color:var(--red);background:#fafbfc;transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.1)}
@@ -203,12 +174,9 @@
     .badge-amber{background:rgba(90,106,126,.12);color:#5a6a7e}
     .badge-green{background:var(--green-dim);color:var(--green)}
     .badge-red{background:var(--red-dim);color:#ff8a78}
-
-    /* ── DRILLDOWN ── */
+    .badge-purple{background:var(--install-dim);color:var(--install)}
     .dd-hdr{display:flex;align-items:center;gap:.875rem;margin-bottom:1.25rem;flex-wrap:wrap}
     .dd-title{font-family:var(--font-d);font-size:1.1rem;font-weight:800;color:var(--text-1)}
-
-    /* ── CALENDAR ── */
     #view-calendar .fc{height:100%!important;font-family:var(--font-b)!important}
     #view-calendar .fc-toolbar{padding:.875rem 1.25rem;background:#ffffff;border-bottom:1px solid var(--border);margin-bottom:0!important}
     #view-calendar .fc-toolbar-title{font-family:var(--font-d)!important;font-size:1rem!important;font-weight:800!important;color:var(--text-1)!important}
@@ -226,8 +194,6 @@
     .fc-multiday-first{border-radius:3px 0 0 3px!important}
     .fc-multiday-last{border-radius:0 3px 3px 0!important}
     .fc-multiday-mid{border-left:none!important;border-right:none!important}
-
-    /* ── MODAL ── */
     .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:800;padding:1rem;backdrop-filter:blur(4px);animation:mBgIn .2s ease both}
     @keyframes mBgIn{from{opacity:0}to{opacity:1}}
     .modal{background:var(--bg-panel);border:1px solid var(--border-med);border-radius:var(--r-lg);width:100%;max-width:580px;max-height:90vh;display:flex;flex-direction:column;box-shadow:var(--sh-lg);animation:mIn .25s cubic-bezier(.16,1,.3,1) both;overflow:hidden}
@@ -237,8 +203,6 @@
     .modal-hdr-title{font-family:var(--font-d);font-size:1rem;font-weight:800;color:var(--text-1);letter-spacing:-.3px}
     .modal-body{padding:1.25rem;overflow-y:auto;flex:1}
     .modal-footer{padding:.875rem 1.25rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:.5rem;flex-shrink:0;background:#f7f8fa}
-
-    /* ── FORM ── */
     .form-group{margin-bottom:1rem}
     .form-label{display:block;font-size:.7rem;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.4rem}
     .form-control{width:100%;padding:.65rem .875rem;background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-sm);color:var(--text-1);font-family:var(--font-b);font-size:.875rem;transition:all var(--t);-webkit-appearance:none}
@@ -250,13 +214,15 @@
     .cols-2{grid-template-columns:1fr 1fr}
     .cols-3{grid-template-columns:1fr 1fr 1fr}
     .form-section{font-size:.68rem;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin:1.25rem 0 .75rem;padding-bottom:.4rem;border-bottom:1px solid var(--border)}
-
-    /* ── TABS ── */
+    /* ── TOGGLE ── */
+    .toggle-group{display:flex;align-items:center;gap:.75rem;background:var(--install-dim);border:1px solid var(--install-glow);border-radius:var(--r-sm);padding:.7rem .875rem;cursor:pointer;transition:all var(--t)}
+    .toggle-group:hover{background:rgba(124,58,237,.16)}
+    .toggle-group input[type="checkbox"]{width:16px;height:16px;accent-color:var(--install);cursor:pointer;flex-shrink:0}
+    .toggle-group-label{font-size:.85rem;font-weight:600;color:var(--install)}
+    .toggle-group-sub{font-size:.72rem;color:var(--text-3);margin-top:2px}
     .tabs{display:flex;gap:.1rem;background:#eef0f4;border-radius:var(--r-sm);padding:3px;margin-bottom:1.1rem}
     .tab-btn{flex:1;padding:.45rem .75rem;background:none;border:none;border-radius:4px;cursor:pointer;font-family:var(--font-b);font-size:.78rem;font-weight:500;color:var(--text-3);transition:all var(--t)}
     .tab-btn.active{background:var(--bg-card);color:var(--text-1);box-shadow:var(--sh-sm)}
-
-    /* ── CHECKLIST ── */
     .checklist-wrap{display:flex;flex-direction:column;gap:.4rem}
     .check-item{background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-sm);padding:.75rem .875rem;transition:background var(--t),border-color var(--t)}
     .check-item.done{background:rgba(29,184,122,.05);border-color:rgba(29,184,122,.2)}
@@ -269,20 +235,31 @@
     .comment-wrap{margin-top:.5rem;padding-left:1.75rem}
     .comment-input{width:100%;padding:.4rem .65rem;background:#f7f8fa;border:1px solid var(--border-med);border-radius:var(--r-sm);color:var(--text-2);font-family:var(--font-b);font-size:.78rem;transition:all var(--t)}
     .comment-input:focus{outline:none;border-color:var(--blue-glow);color:var(--text-1)}
-
-    /* ── HISTORY ── */
     .history-list{display:flex;flex-direction:column;gap:.4rem;max-height:280px;overflow-y:auto}
     .history-item{padding:.65rem .875rem;background:#ffffff;border:1px solid var(--border-med);border-left:3px solid var(--green);border-radius:var(--r-sm);font-size:.78rem}
     .history-date{font-family:var(--font-m);font-weight:500;color:var(--green);margin-bottom:.2rem}
     .history-comment{color:var(--text-2);font-style:italic}
-
-    /* ── JOB DETAIL ── */
     .jd-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1rem}
     .jd-field{display:flex;flex-direction:column;gap:2px}
     .jd-fl{font-size:.65rem;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.8px}
     .jd-fv{font-size:.82rem;color:var(--text-1)}
     .jd-scope{background:#f7f8fa;border:1px solid var(--border-med);border-radius:var(--r-sm);padding:.65rem .875rem;font-size:.82rem;color:var(--text-2);line-height:1.5;margin-bottom:1rem}
-
+    /* ── INSTALLATIONS VIEW ── */
+    #view-installations{position:absolute;inset:0;overflow-y:auto;padding:1.5rem;background:var(--bg-base)}
+    .install-list{display:flex;flex-direction:column;gap:.75rem}
+    .install-card{background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-md);padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;box-shadow:var(--sh-sm);transition:all var(--t);cursor:pointer}
+    .install-card:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.1);border-color:rgba(124,58,237,.2)}
+    .install-card-icon{width:40px;height:40px;background:var(--install-dim);border:1px solid var(--install-glow);border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;font-size:.95rem;color:var(--install);flex-shrink:0}
+    .install-card-body{flex:1;min-width:0}
+    .install-card-name{font-family:var(--font-d);font-size:.95rem;font-weight:700;color:var(--text-1);margin-bottom:.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .install-card-meta{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center}
+    .install-card-date{font-family:var(--font-m);font-size:.72rem;color:var(--text-3)}
+    .install-card-actions{display:flex;gap:.4rem;flex-shrink:0;align-items:center}
+    .cert-pill{display:inline-flex;align-items:center;gap:.35rem;padding:.35rem .8rem;border-radius:20px;font-size:.72rem;font-weight:600;font-family:var(--font-m);cursor:pointer;transition:all var(--t);border:1px solid transparent;white-space:nowrap;user-select:none}
+    .cert-pill.sent{background:var(--green-dim);color:var(--green);border-color:rgba(26,158,106,.25)}
+    .cert-pill.sent:hover{background:var(--green);color:#fff}
+    .cert-pill.unsent{background:var(--red-dim);color:#ff8a78;border-color:var(--red-glow)}
+    .cert-pill.unsent:hover{background:var(--red);color:#fff}
     /* ── TOAST ── */
     #toast-container{position:fixed;bottom:1.25rem;right:1.25rem;z-index:9000;display:flex;flex-direction:column;gap:.4rem}
     .toast{padding:.75rem 1rem;background:#ffffff;border:1px solid var(--border-med);border-radius:var(--r-md);color:var(--text-1);font-size:.82rem;display:flex;align-items:center;gap:.6rem;min-width:220px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:toastIn .25s cubic-bezier(.16,1,.3,1) both;transition:opacity .3s}
@@ -290,13 +267,9 @@
     .toast.ts{border-left:3px solid var(--green)}.toast.ts i{color:var(--green)}
     .toast.tw{border-left:3px solid var(--amber)}.toast.tw i{color:var(--amber)}
     .toast.ti{border-left:3px solid var(--blue)}.toast.ti i{color:var(--blue-light)}
-
-    /* ── EMPTY ── */
     .empty{grid-column:1/-1;text-align:center;padding:3rem 1rem;color:var(--text-3)}
     .empty i{font-size:2rem;margin-bottom:.75rem;display:block}
     .empty p{font-size:.82rem}
-
-    /* ── RESPONSIVE ── */
     @media(max-width:640px){
         :root{--sidebar-w:56px}
         .cols-3{grid-template-columns:1fr 1fr}
@@ -304,11 +277,12 @@
         .jd-grid{grid-template-columns:1fr}
         .stats-row{grid-template-columns:1fr 1fr}
         .panel-grid{grid-template-columns:1fr!important}
+        .install-card{flex-wrap:wrap}
+        .install-card-actions{width:100%}
     }
     </style>
 </head>
 <body>
-
 <div id="toast-container"></div>
 
 <!-- LOGIN -->
@@ -355,6 +329,7 @@
             <button id="btn-view-dashboard" class="nav-btn active"><i class="fas fa-chart-pie"></i><span class="nav-tip">Dashboard</span></button>
             <button id="btn-view-jobs" class="nav-btn"><i class="fas fa-briefcase"></i><span class="nav-tip">Trabajos</span></button>
             <button id="btn-view-calendar" class="nav-btn"><i class="fas fa-calendar-alt"></i><span class="nav-tip">Calendario</span></button>
+            <button id="btn-view-installations" class="nav-btn"><i class="fas fa-plug"></i><span class="nav-tip">Instalaciones</span></button>
         </div>
         <div class="sb-spacer"></div>
         <div class="sb-bottom">
@@ -380,42 +355,14 @@
                         </div>
                     </div>
                     <div class="filters-row">
-                        <div class="fg">
-                            <label class="fg-label">Cliente</label>
-                            <select id="filter-client" class="fg-select"><option value="all">Todos los clientes</option></select>
-                        </div>
-                        <div class="fg">
-                            <label class="fg-label">Tipo</label>
-                            <select id="filter-type" class="fg-select">
-                                <option value="all">Todos</option>
-                                <option value="periodic">Periódicos</option>
-                                <option value="unique">Únicos</option>
-                            </select>
-                        </div>
+                        <div class="fg"><label class="fg-label">Cliente</label><select id="filter-client" class="fg-select"><option value="all">Todos los clientes</option></select></div>
+                        <div class="fg"><label class="fg-label">Tipo</label><select id="filter-type" class="fg-select"><option value="all">Todos</option><option value="periodic">Periódicos</option><option value="unique">Únicos</option></select></div>
                     </div>
                     <div class="stats-row">
-                        <div class="stat-card blue">
-                            <div class="stat-icon"><i class="fas fa-percent"></i></div>
-                            <div class="stat-value" id="stat-percent">0%</div>
-                            <div class="stat-label">Completado</div>
-                        </div>
-                        <div class="stat-card green clickable" id="card-completed">
-                            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                            <div class="stat-value" id="stat-completed">0</div>
-                            <div class="stat-label">Realizados</div>
-                            <div class="stat-hint">↗ Ver lista</div>
-                        </div>
-                        <div class="stat-card red clickable" id="card-delayed">
-                            <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                            <div class="stat-value" id="stat-delayed">0</div>
-                            <div class="stat-label">Retrasados</div>
-                            <div class="stat-hint">↗ Ver lista</div>
-                        </div>
-                        <div class="stat-card amber">
-                            <div class="stat-icon"><i class="fas fa-clock"></i></div>
-                            <div class="stat-value" id="stat-pending">0</div>
-                            <div class="stat-label">Pendientes</div>
-                        </div>
+                        <div class="stat-card blue"><div class="stat-icon"><i class="fas fa-percent"></i></div><div class="stat-value" id="stat-percent">0%</div><div class="stat-label">Completado</div></div>
+                        <div class="stat-card green clickable" id="card-completed"><div class="stat-icon"><i class="fas fa-check-circle"></i></div><div class="stat-value" id="stat-completed">0</div><div class="stat-label">Realizados</div><div class="stat-hint">↗ Ver lista</div></div>
+                        <div class="stat-card red clickable" id="card-delayed"><div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div><div class="stat-value" id="stat-delayed">0</div><div class="stat-label">Retrasados</div><div class="stat-hint">↗ Ver lista</div></div>
+                        <div class="stat-card amber"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-value" id="stat-pending">0</div><div class="stat-label">Pendientes</div></div>
                     </div>
                     <div style="display:grid;grid-template-columns:260px 1fr;gap:1rem;" class="panel-grid">
                         <div class="panel">
@@ -429,10 +376,7 @@
                             </div>
                         </div>
                         <div class="panel">
-                            <div class="panel-hdr">
-                                <div class="panel-title">Rendimiento Mensual</div>
-                                <span style="font-family:var(--font-m);font-size:.68rem;color:var(--text-3)" id="chart-year"></span>
-                            </div>
+                            <div class="panel-hdr"><div class="panel-title">Rendimiento Mensual</div><span style="font-family:var(--font-m);font-size:.68rem;color:var(--text-3)" id="chart-year"></span></div>
                             <div class="panel-body"><div class="chart-wrap"><canvas id="monthlyChart"></canvas></div></div>
                         </div>
                     </div>
@@ -449,20 +393,37 @@
             <!-- JOBS -->
             <div id="view-jobs" class="view-pane hidden">
                 <div class="page-hdr">
-                    <div class="ph-left">
-                        <div class="page-title">Trabajos</div>
-                        <div class="page-sub" id="jobs-count-label">—</div>
-                    </div>
-                    <div class="search-wrap">
-                        <i class="fas fa-search si"></i>
-                        <input type="text" id="job-search" class="search-input" placeholder="Buscar cliente...">
-                    </div>
+                    <div class="ph-left"><div class="page-title">Trabajos</div><div class="page-sub" id="jobs-count-label">—</div></div>
+                    <div class="search-wrap"><i class="fas fa-search si"></i><input type="text" id="job-search" class="search-input" placeholder="Buscar cliente..."></div>
                 </div>
                 <div id="job-list-container" class="job-grid"></div>
             </div>
 
             <!-- CALENDAR -->
             <div id="view-calendar" class="hidden"></div>
+
+            <!-- INSTALLATIONS -->
+            <div id="view-installations" class="hidden">
+                <div class="page-hdr">
+                    <div class="ph-left">
+                        <div class="page-title" style="color:var(--install)"><i class="fas fa-plug" style="font-size:1.1rem;margin-right:.4rem"></i>Instalaciones</div>
+                        <div class="page-sub" id="install-count-label">—</div>
+                    </div>
+                    <div class="search-wrap"><i class="fas fa-search si"></i><input type="text" id="install-search" class="search-input" placeholder="Buscar cliente..."></div>
+                </div>
+                <div class="stats-row">
+                    <div class="stat-card purple"><div class="stat-icon"><i class="fas fa-plug"></i></div><div class="stat-value" id="stat-install-total">0</div><div class="stat-label">Total instalaciones</div></div>
+                    <div class="stat-card green"><div class="stat-icon"><i class="fas fa-certificate"></i></div><div class="stat-value" id="stat-install-sent">0</div><div class="stat-label">Cert. Enviado</div></div>
+                    <div class="stat-card red"><div class="stat-icon"><i class="fas fa-file-circle-xmark"></i></div><div class="stat-value" id="stat-install-unsent">0</div><div class="stat-label">Cert. Sin Enviar</div></div>
+                </div>
+                <div style="display:flex;gap:.5rem;margin-bottom:1.1rem;flex-wrap:wrap">
+                    <button class="btn btn-ghost btn-sm install-filter-btn active" data-filter="all"><i class="fas fa-list"></i> Todas</button>
+                    <button class="btn btn-ghost btn-sm install-filter-btn" data-filter="unsent"><i class="fas fa-file-circle-xmark"></i> Sin certificado</button>
+                    <button class="btn btn-ghost btn-sm install-filter-btn" data-filter="sent"><i class="fas fa-certificate"></i> Certificado enviado</button>
+                </div>
+                <div id="install-list-container" class="install-list"></div>
+            </div>
+
         </div>
     </div>
 </div>
@@ -478,48 +439,31 @@
         <div class="modal-body">
             <form id="job-form">
                 <input type="hidden" id="record-id">
+                <!-- INSTALACIÓN TOGGLE -->
                 <div class="form-group">
-                    <label class="form-label">Nombre / Cliente *</label>
-                    <input type="text" id="j-name" class="form-control" required placeholder="Empresa o cliente">
+                    <label class="toggle-group" id="install-toggle-label">
+                        <input type="checkbox" id="j-is-installation">
+                        <div>
+                            <div class="toggle-group-label"><i class="fas fa-plug"></i> &nbsp;Este trabajo es una Instalación</div>
+                            <div class="toggle-group-sub">Se agregará al control de certificados de garantía</div>
+                        </div>
+                    </label>
                 </div>
+                <div class="form-group"><label class="form-label">Nombre / Cliente *</label><input type="text" id="j-name" class="form-control" required placeholder="Empresa o cliente"></div>
                 <div class="form-row cols-2">
-                    <div class="form-group">
-                        <label class="form-label">Persona de Contacto</label>
-                        <input type="text" id="j-contact" class="form-control" placeholder="Nombre">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Teléfono</label>
-                        <input type="tel" id="j-phone" class="form-control" placeholder="+506 ...">
-                    </div>
+                    <div class="form-group"><label class="form-label">Persona de Contacto</label><input type="text" id="j-contact" class="form-control" placeholder="Nombre"></div>
+                    <div class="form-group"><label class="form-label">Teléfono</label><input type="tel" id="j-phone" class="form-control" placeholder="+506 ..."></div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Ubicación</label>
-                    <input type="text" id="j-location" class="form-control" placeholder="Dirección o zona">
-                </div>
+                <div class="form-group"><label class="form-label">Ubicación</label><input type="text" id="j-location" class="form-control" placeholder="Dirección o zona"></div>
                 <div class="form-section">Programación</div>
                 <div class="form-row cols-3">
-                    <div class="form-group">
-                        <label class="form-label">Fecha de Inicio *</label>
-                        <input type="date" id="j-start-date" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Periodo (meses)</label>
-                        <input type="number" id="j-period" class="form-control" min="0" max="60" value="1" placeholder="0 = única">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Duración (días)</label>
-                        <input type="number" id="j-duration" class="form-control" min="1" max="365" value="1">
-                    </div>
+                    <div class="form-group"><label class="form-label">Fecha de Inicio *</label><input type="date" id="j-start-date" class="form-control" required></div>
+                    <div class="form-group"><label class="form-label">Periodo (meses)</label><input type="number" id="j-period" class="form-control" min="0" max="60" value="1" placeholder="0 = única"></div>
+                    <div class="form-group"><label class="form-label">Duración (días)</label><input type="number" id="j-duration" class="form-control" min="1" max="365" value="1"></div>
                 </div>
                 <div class="form-section">Descripción</div>
-                <div class="form-group">
-                    <label class="form-label">Alcance del Trabajo</label>
-                    <textarea id="j-scope" class="form-control" rows="3" placeholder="Describe el alcance..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Información Adicional</label>
-                    <textarea id="j-additional" class="form-control" rows="2" placeholder="Notas, accesos, equipo..."></textarea>
-                </div>
+                <div class="form-group"><label class="form-label">Alcance del Trabajo</label><textarea id="j-scope" class="form-control" rows="3" placeholder="Describe el alcance..."></textarea></div>
+                <div class="form-group"><label class="form-label">Información Adicional</label><textarea id="j-additional" class="form-control" rows="2" placeholder="Notas, accesos, equipo..."></textarea></div>
             </form>
         </div>
         <div class="modal-footer">
@@ -557,6 +501,14 @@
                 <div style="font-size:.68rem;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.4rem">Información Adicional</div>
                 <div class="jd-scope" id="jd-additional" style="margin-bottom:0"></div>
             </div>
+            <!-- Certificate section (only for installations) -->
+            <div id="jd-cert-section" class="hidden" style="margin-bottom:1rem;padding:1rem;background:var(--install-dim);border:1px solid var(--install-glow);border-radius:var(--r-md)">
+                <div style="font-size:.68rem;font-weight:700;color:var(--install);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.6rem"><i class="fas fa-certificate"></i> Certificado de Garantía</div>
+                <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+                    <div id="jd-cert-status" style="font-size:.85rem;color:var(--text-1);flex:1"></div>
+                    <button id="jd-cert-toggle" class="btn btn-sm"></button>
+                </div>
+            </div>
             <div class="tabs">
                 <button class="tab-btn active" data-tab="jd-check">Programación</button>
                 <button class="tab-btn" data-tab="jd-hist">Historial</button>
@@ -591,9 +543,8 @@
     const auth   = getAuth(fbApp);
     const jobsRef = collection(db, "maintenances");
 
-    let state = { user:null, jobs:[], calendar:null, currentView:'dashboard', chartInstance:null };
+    let state = { user:null, jobs:[], calendar:null, currentView:'dashboard', chartInstance:null, installFilter:'all' };
 
-    /* AUTH */
     const Auth = {
         check: () => onAuthStateChanged(auth, user => {
             if (user) {
@@ -607,33 +558,32 @@
             }
         }),
         login: (u,p) => signInWithEmailAndPassword(auth,u,p)
-            .then(() => { document.getElementById('login-error').classList.add('hidden'); document.getElementById('login-form').reset(); })
-            .catch(() => document.getElementById('login-error').classList.remove('hidden')),
-        logout: () => signOut(auth).then(() => location.reload())
+            .then(()=>{ document.getElementById('login-error').classList.add('hidden'); document.getElementById('login-form').reset(); })
+            .catch(()=>document.getElementById('login-error').classList.remove('hidden')),
+        logout: ()=>signOut(auth).then(()=>location.reload())
     };
 
-    /* DB */
     const DB = {
         listen: () => {
             if (!state.user) return;
             onSnapshot(query(jobsRef, orderBy("name","asc")), snap => {
-                state.jobs = snap.docs.map(d => ({id:d.id,...d.data()}));
-                if (state.currentView==='jobs')      App.renderJobList();
-                if (state.currentView==='calendar')  App.renderCalendar();
-                if (state.currentView==='dashboard') Dashboard.render();
+                state.jobs = snap.docs.map(d=>({id:d.id,...d.data()}));
+                if (state.currentView==='jobs')          App.renderJobList();
+                if (state.currentView==='calendar')      App.renderCalendar();
+                if (state.currentView==='dashboard')     Dashboard.render();
+                if (state.currentView==='installations') Installations.render();
             }, console.error);
         },
-        add:    data => addDoc(jobsRef,{...data,createdAt:new Date()}).then(()=>Toast.show('Trabajo programado','success')).catch(console.error),
-        update: (data,id) => updateDoc(doc(db,"maintenances",id),data).then(()=>Toast.show('Registro actualizado','success')).catch(console.error),
-        delete: id => deleteDoc(doc(db,"maintenances",id)).then(()=>Toast.show('Trabajo eliminado','warning')).catch(console.error),
-        getById: id => state.jobs.find(j=>j.id===id)
+        add:    data=>addDoc(jobsRef,{...data,createdAt:new Date()}).then(()=>Toast.show('Trabajo programado','success')).catch(console.error),
+        update: (data,id)=>updateDoc(doc(db,"maintenances",id),data).then(()=>Toast.show('Registro actualizado','success')).catch(console.error),
+        delete: id=>deleteDoc(doc(db,"maintenances",id)).then(()=>Toast.show('Trabajo eliminado','warning')).catch(console.error),
+        getById: id=>state.jobs.find(j=>j.id===id)
     };
 
-    /* JOB LOGIC */
     const JL = {
         generatePeriods: job => {
             if (!job.startDate) return [];
-            const today=new Date(), endF=new Date(today.getFullYear(), 11, 31);
+            const today=new Date(), endF=new Date(today.getFullYear(),11,31);
             if (!job.checklist) job.checklist=[];
             const excl=job.excludedDates||[], periods=[];
             let cur=new Date(job.startDate);
@@ -671,6 +621,72 @@
             const job=DB.getById(jobId);
             const idx=job.checklist.findIndex(p=>p.date===date);
             if (idx>-1) { job.checklist[idx].comment=comment; DB.update(job,jobId); Toast.show('Comentario guardado','success'); }
+        }
+    };
+
+    /* ── INSTALLATIONS ── */
+    const Installations = {
+        getList: (filter='all', search='') => state.jobs.filter(j => {
+            if (!j.isInstallation) return false;
+            if (search && !j.name.toLowerCase().includes(search.toLowerCase())) return false;
+            if (filter==='sent'   && !j.certificateSent) return false;
+            if (filter==='unsent' &&  j.certificateSent) return false;
+            return true;
+        }),
+        toggleCertificate: (id, evt) => {
+            if (evt) evt.stopPropagation();
+            const job = DB.getById(id); if (!job) return;
+            const newVal = !job.certificateSent;
+            DB.update({...job, certificateSent: newVal}, id);
+            Toast.show(newVal ? 'Certificado marcado como enviado ✓' : 'Certificado marcado como sin enviar', newVal ? 'success' : 'warning');
+        },
+        render: () => {
+            const search = document.getElementById('install-search').value;
+            const all    = Installations.getList('all', search);
+            const sent   = all.filter(j => j.certificateSent).length;
+            const unsent = all.filter(j => !j.certificateSent).length;
+            document.getElementById('stat-install-total').innerText  = all.length;
+            document.getElementById('stat-install-sent').innerText   = sent;
+            document.getElementById('stat-install-unsent').innerText = unsent;
+            document.getElementById('install-count-label').innerText = `${all.length} instalación${all.length!==1?'es':''}`;
+            const filtered = Installations.getList(state.installFilter, search);
+            const container = document.getElementById('install-list-container');
+            container.innerHTML = '';
+            if (!filtered.length) {
+                container.innerHTML = `<div class="empty"><i class="fas fa-plug"></i><p>${all.length ? 'Sin resultados para este filtro.' : 'No hay instalaciones registradas aún.<br>Marca "Es una Instalación" al crear un trabajo.'}</p></div>`;
+                return;
+            }
+            filtered.slice().sort((a,b) => {
+                if (!!a.certificateSent !== !!b.certificateSent) return a.certificateSent ? 1 : -1;
+                return (b.startDate||'').localeCompare(a.startDate||'');
+            }).forEach(j => {
+                const isSent = !!j.certificateSent;
+                const card = document.createElement('div');
+                card.className = 'install-card';
+                card.innerHTML = `
+                    <div class="install-card-icon"><i class="fas fa-plug"></i></div>
+                    <div class="install-card-body">
+                        <div class="install-card-name">${j.name}</div>
+                        <div class="install-card-meta">
+                            ${j.location?`<span style="font-size:.72rem;color:var(--text-3)"><i class="fas fa-map-marker-alt" style="margin-right:3px"></i>${j.location}</span>`:''}
+                            ${j.startDate?`<span class="install-card-date"><i class="fas fa-calendar-alt" style="margin-right:3px"></i>${j.startDate}</span>`:''}
+                            ${j.contact?`<span style="font-size:.72rem;color:var(--text-3)"><i class="fas fa-user" style="margin-right:3px"></i>${j.contact}</span>`:''}
+                        </div>
+                    </div>
+                    <div class="install-card-actions">
+                        <span class="cert-pill ${isSent?'sent':'unsent'}" data-id="${j.id}" title="Click para cambiar estado del certificado">
+                            <i class="fas ${isSent?'fa-certificate':'fa-file-circle-xmark'}"></i>
+                            ${isSent?'Cert. enviado':'Sin certificado'}
+                        </span>
+                        <button class="btn btn-ghost btn-icon btn-sm detail-btn" data-id="${j.id}" title="Ver detalles" style="margin-left:.1rem">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>`;
+                card.querySelector('.cert-pill').addEventListener('click', e => { e.stopPropagation(); Installations.toggleCertificate(j.id); });
+                card.querySelector('.detail-btn').addEventListener('click', e => { e.stopPropagation(); JobModal.open(j.id); });
+                card.addEventListener('click', ()=>JobModal.open(j.id));
+                container.appendChild(card);
+            });
         }
     };
 
@@ -738,8 +754,7 @@
             });
         },
         showList: type => {
-            const d=Dashboard.getData();
-            const list=type==='delayed'?d.lists.dItems:d.lists.cItems;
+            const d=Dashboard.getData(), list=type==='delayed'?d.lists.dItems:d.lists.cItems;
             const container=document.getElementById('drilldown-list');
             document.getElementById('dashboard-summary').classList.add('hidden');
             document.getElementById('dashboard-drilldown').classList.remove('hidden');
@@ -747,8 +762,7 @@
             container.innerHTML='';
             if (!list.length) { container.innerHTML='<div class="empty"><i class="fas fa-inbox"></i><p>Sin registros.</p></div>'; return; }
             list.forEach(item=>{
-                const card=document.createElement('div');
-                card.className=`job-card ${type==='delayed'?'delayed':'completed'}`;
+                const card=document.createElement('div'); card.className=`job-card ${type==='delayed'?'delayed':'completed'}`;
                 card.innerHTML=`<div><div class="jc-name">${item.job.name}</div><div class="jc-meta"><i class="fas fa-calendar-alt"></i>${item.period.date}</div><div class="jc-meta"><i class="fas fa-map-marker-alt"></i>${item.job.location||'—'}</div></div>${item.period.comment?`<div style="font-size:.75rem;color:var(--text-3);font-style:italic;background:var(--bg-input);padding:.5rem .65rem;border-radius:4px;border-left:2px solid var(--border-med)">"${item.period.comment}"</div>`:''}`;
                 card.onclick=()=>JobModal.open(item.job.id);
                 container.appendChild(card);
@@ -762,20 +776,24 @@
         render: () => { Dashboard.showSummary(); Dashboard.populateClientFilter(); }
     };
 
-    /* APP */
     const App = {
-        init: () => { App.bindEvents(); Auth.check(); },
-        show: () => App.switchView('dashboard'),
+        init: ()=>{ App.bindEvents(); Auth.check(); },
+        show: ()=>App.switchView('dashboard'),
         switchView: v => {
             state.currentView=v;
-            ['dashboard','jobs','calendar'].forEach(n=>{
-                document.getElementById(`btn-view-${n}`).classList.toggle('active',n===v);
-                document.getElementById(`view-${n}`).classList.toggle('hidden',n!==v);
+            ['dashboard','jobs','calendar','installations'].forEach(n=>{
+                const btn=document.getElementById(`btn-view-${n}`);
+                const pane=document.getElementById(`view-${n}`);
+                if (btn) btn.classList.remove('active','active-install');
+                if (pane) pane.classList.toggle('hidden',n!==v);
             });
+            const activeBtn=document.getElementById(`btn-view-${v}`);
+            if (activeBtn) activeBtn.classList.add(v==='installations'?'active-install':'active');
             const ba=document.getElementById('btn-add');
-            if (v==='dashboard') { ba.classList.add('hidden'); Dashboard.render(); }
-            else if (v==='jobs') { ba.classList.remove('hidden'); ba.onclick=()=>ModalForm.open(); document.getElementById('job-search').value=''; App.renderJobList(); }
-            else if (v==='calendar') { ba.classList.add('hidden'); if(!state.calendar) App.initCalendar(); requestAnimationFrame(()=>{ if(state.calendar){state.calendar.render();App.renderCalendar();} }); }
+            if (v==='dashboard')          { ba.classList.add('hidden'); Dashboard.render(); }
+            else if (v==='jobs')          { ba.classList.remove('hidden'); ba.onclick=()=>ModalForm.open(); document.getElementById('job-search').value=''; App.renderJobList(); }
+            else if (v==='calendar')      { ba.classList.add('hidden'); if(!state.calendar) App.initCalendar(); requestAnimationFrame(()=>{ if(state.calendar){state.calendar.render();App.renderCalendar();} }); }
+            else if (v==='installations') { ba.classList.add('hidden'); Installations.render(); }
         },
         initCalendar: () => {
             state.calendar=new FullCalendar.Calendar(document.getElementById('view-calendar'),{
@@ -791,11 +809,11 @@
                             if (idx>-1) job.checklist[idx].date=nd;
                             else { job.checklist.push({date:nd,completed:false,comment:"",dateCompleted:null}); if(!job.excludedDates.includes(od)) job.excludedDates.push(od); }
                             job.checklist.sort((a,b)=>new Date(a.date)-new Date(b.date));
-                            DB.update(job,parts[1]).then(()=>{Toast.show('Fecha reprogramada','success');App.renderCalendar();});
+                            DB.update(job,parts[1]).then(()=>{ Toast.show('Fecha reprogramada','success'); App.renderCalendar(); });
                         }
                     }
                 },
-                eventClick: info => { const jobId=info.event.extendedProps.jobId||info.event.id.split('|')[1]; if(jobId) JobModal.open(jobId); }
+                eventClick: info=>{ const jobId=info.event.extendedProps.jobId||info.event.id.split('|')[1]; if(jobId) JobModal.open(jobId); }
             });
             state.calendar.render();
         },
@@ -824,7 +842,7 @@
         bindEvents: () => {
             document.getElementById('login-form').addEventListener('submit',e=>{ e.preventDefault(); Auth.login(document.getElementById('username').value,document.getElementById('password').value); });
             document.getElementById('btn-logout').addEventListener('click',Auth.logout);
-            ['dashboard','jobs','calendar'].forEach(v=>document.getElementById(`btn-view-${v}`).addEventListener('click',()=>App.switchView(v)));
+            ['dashboard','jobs','calendar','installations'].forEach(v=>{ const b=document.getElementById(`btn-view-${v}`); if(b) b.addEventListener('click',()=>App.switchView(v)); });
             document.querySelectorAll('.close-modal').forEach(b=>b.addEventListener('click',()=>document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.add('hidden'))));
             document.getElementById('filter-client').addEventListener('change',Dashboard.renderSummary);
             document.getElementById('filter-type').addEventListener('change',Dashboard.renderSummary);
@@ -833,6 +851,15 @@
             document.getElementById('btn-back-dashboard').addEventListener('click',Dashboard.showSummary);
             document.getElementById('job-search').addEventListener('input',e=>App.renderJobList(e.target.value.toLowerCase()));
             document.getElementById('btn-save-job').addEventListener('click',()=>ModalForm.save());
+            document.getElementById('install-search').addEventListener('input',()=>Installations.render());
+            document.querySelectorAll('.install-filter-btn').forEach(btn=>{
+                btn.addEventListener('click',()=>{
+                    document.querySelectorAll('.install-filter-btn').forEach(b=>b.classList.remove('active'));
+                    btn.classList.add('active');
+                    state.installFilter=btn.dataset.filter;
+                    Installations.render();
+                });
+            });
             document.querySelectorAll('#modal-job-details .tab-btn').forEach(btn=>btn.addEventListener('click',e=>{
                 document.querySelectorAll('#modal-job-details .tab-btn').forEach(b=>b.classList.remove('active'));
                 document.querySelectorAll('#modal-job-details .tab-content').forEach(c=>c.classList.add('hidden'));
@@ -848,14 +875,25 @@
                 const ps=JL.generatePeriods(j), tot=ps.length, done=ps.filter(p=>p.completed).length, pct=tot?Math.round(done/tot*100):0;
                 const isP=(parseInt(j.periodMonths)||0)>0, dur=parseInt(j.durationDays)||1;
                 const card=document.createElement('div'); card.className='job-card';
-                card.innerHTML=`<div><div class="jc-name">${j.name}</div><div class="jc-meta"><i class="fas fa-map-marker-alt"></i>${j.location||'—'}</div><div class="jc-meta" style="margin-top:.3rem;gap:.3rem"><span class="badge ${isP?'badge-amber':'badge-blue'}"><i class="fas ${isP?'fa-sync':'fa-flag-checkered'}"></i>${isP?`Cada ${j.periodMonths} mes(es)`:'Visita única'}</span>${dur>1?`<span class="badge badge-blue"><i class="fas fa-calendar-week"></i>${dur} días</span>`:''}</div></div><div><div class="jc-progress-wrap"><div class="jc-progress-fill" style="width:${pct}%"></div></div><div class="jc-progress-txt">${done}/${tot} completados · ${pct}%</div></div>`;
+                card.innerHTML=`<div>
+                    <div class="jc-name">${j.name}</div>
+                    <div class="jc-meta"><i class="fas fa-map-marker-alt"></i>${j.location||'—'}</div>
+                    <div class="jc-meta" style="margin-top:.3rem;gap:.3rem">
+                        <span class="badge ${isP?'badge-amber':'badge-blue'}"><i class="fas ${isP?'fa-sync':'fa-flag-checkered'}"></i>${isP?`Cada ${j.periodMonths} mes(es)`:'Visita única'}</span>
+                        ${dur>1?`<span class="badge badge-blue"><i class="fas fa-calendar-week"></i>${dur} días</span>`:''}
+                        ${j.isInstallation?`<span class="badge badge-purple"><i class="fas fa-plug"></i>Instalación</span>`:''}
+                    </div>
+                </div>
+                <div>
+                    <div class="jc-progress-wrap"><div class="jc-progress-fill" style="width:${pct}%"></div></div>
+                    <div class="jc-progress-txt">${done}/${tot} completados · ${pct}%</div>
+                </div>`;
                 card.onclick=()=>JobModal.open(j.id);
                 c.appendChild(card);
             });
         }
     };
 
-    /* MODAL FORM */
     const ModalForm = {
         open: (id=null) => {
             document.getElementById('modal-form').classList.remove('hidden');
@@ -873,22 +911,41 @@
                 document.getElementById('j-start-date').value=d.startDate||'';
                 document.getElementById('j-period').value=d.periodMonths??1;
                 document.getElementById('j-duration').value=d.durationDays||1;
+                document.getElementById('j-is-installation').checked=!!d.isInstallation;
             } else {
                 document.getElementById('j-start-date').value=new Date().toISOString().split('T')[0];
                 document.getElementById('j-period').value=1;
                 document.getElementById('j-duration').value=1;
+                document.getElementById('j-is-installation').checked=false;
             }
         },
         save: () => {
             const id=document.getElementById('record-id').value, form=document.getElementById('job-form');
             if (!form.checkValidity()) { form.reportValidity(); return; }
-            const data={name:document.getElementById('j-name').value,contact:document.getElementById('j-contact').value,phone:document.getElementById('j-phone').value,scope:document.getElementById('j-scope').value,location:document.getElementById('j-location').value,additional:document.getElementById('j-additional').value,startDate:document.getElementById('j-start-date').value,periodMonths:parseInt(document.getElementById('j-period').value)||0,durationDays:parseInt(document.getElementById('j-duration').value)||1};
-            if (id) DB.update({...DB.getById(id),...data},id); else DB.add(data);
+            const data={
+                name:document.getElementById('j-name').value,
+                contact:document.getElementById('j-contact').value,
+                phone:document.getElementById('j-phone').value,
+                scope:document.getElementById('j-scope').value,
+                location:document.getElementById('j-location').value,
+                additional:document.getElementById('j-additional').value,
+                startDate:document.getElementById('j-start-date').value,
+                periodMonths:parseInt(document.getElementById('j-period').value)||0,
+                durationDays:parseInt(document.getElementById('j-duration').value)||1,
+                isInstallation:document.getElementById('j-is-installation').checked
+            };
+            if (id) {
+                const existing=DB.getById(id);
+                if (existing) data.certificateSent=existing.certificateSent||false;
+                DB.update({...existing,...data},id);
+            } else {
+                data.certificateSent=false;
+                DB.add(data);
+            }
             document.getElementById('modal-form').classList.add('hidden');
         }
     };
 
-    /* JOB MODAL */
     const JobModal = {
         open: id => {
             const j=DB.getById(id); if(!j) return;
@@ -898,17 +955,31 @@
             document.getElementById('jd-location').innerText=j.location||'—';
             document.getElementById('jd-phone').innerText=j.phone||'—';
             document.getElementById('jd-scope').innerText=j.scope||'Sin alcance definido.';
-            const addWrap=document.getElementById('jd-additional-wrap');
-            const addEl=document.getElementById('jd-additional');
-            if (j.additional && j.additional.trim()) {
-                addEl.innerText=j.additional;
-                addWrap.style.display='block';
-            } else {
-                addWrap.style.display='none';
-            }
+            const addWrap=document.getElementById('jd-additional-wrap'), addEl=document.getElementById('jd-additional');
+            if (j.additional&&j.additional.trim()) { addEl.innerText=j.additional; addWrap.style.display='block'; } else addWrap.style.display='none';
             const isP=(parseInt(j.periodMonths)||0)>0, dur=parseInt(j.durationDays)||1;
-            document.getElementById('jd-badges').innerHTML=`<span class="badge ${isP?'badge-amber':'badge-blue'}"><i class="fas ${isP?'fa-sync':'fa-flag-checkered'}"></i>${isP?`Cada ${j.periodMonths} mes(es)`:'Visita única'}</span>${dur>1?`<span class="badge badge-blue"><i class="fas fa-calendar-week"></i>${dur} días</span>`:''}`;
+            document.getElementById('jd-badges').innerHTML=`
+                <span class="badge ${isP?'badge-amber':'badge-blue'}"><i class="fas ${isP?'fa-sync':'fa-flag-checkered'}"></i>${isP?`Cada ${j.periodMonths} mes(es)`:'Visita única'}</span>
+                ${dur>1?`<span class="badge badge-blue"><i class="fas fa-calendar-week"></i>${dur} días</span>`:''}
+                ${j.isInstallation?`<span class="badge badge-purple"><i class="fas fa-plug"></i>Instalación</span>`:''}`;
             document.getElementById('jd-period-label').innerText=(isP?`Periodo: ${j.periodMonths} mes(es)`:'Visita única')+(dur>1?` · Duración: ${dur} días`:'');
+
+            // Certificate section
+            const certSec=document.getElementById('jd-cert-section');
+            if (j.isInstallation) {
+                certSec.classList.remove('hidden');
+                const isSent=!!j.certificateSent;
+                document.getElementById('jd-cert-status').innerHTML=isSent
+                    ? `<i class="fas fa-certificate" style="color:var(--green);margin-right:.4rem"></i><span style="color:var(--green);font-weight:600">Certificado de garantía enviado</span>`
+                    : `<i class="fas fa-file-circle-xmark" style="color:#ff8a78;margin-right:.4rem"></i><span style="color:#ff8a78;font-weight:600">Certificado pendiente de envío</span>`;
+                const toggleBtn=document.getElementById('jd-cert-toggle');
+                toggleBtn.className=`btn btn-sm ${isSent?'btn-ghost':'btn-primary'}`;
+                toggleBtn.innerHTML=isSent?`<i class="fas fa-undo"></i> Marcar sin enviar`:`<i class="fas fa-paper-plane"></i> Marcar como enviado`;
+                toggleBtn.onclick=()=>{ Installations.toggleCertificate(id); setTimeout(()=>JobModal.open(id),400); };
+            } else {
+                certSec.classList.add('hidden');
+            }
+
             document.getElementById('jd-btn-edit').onclick=()=>{ document.getElementById('modal-job-details').classList.add('hidden'); ModalForm.open(id); };
             document.getElementById('jd-btn-delete').onclick=()=>{ if(confirm('¿Eliminar este trabajo?')){ DB.delete(id); document.getElementById('modal-job-details').classList.add('hidden'); } };
             JobModal.renderChecklist(j); JobModal.renderHistory(j);
@@ -937,25 +1008,21 @@
         }
     };
 
-    /* TOAST */
     const Toast = {
         show: (msg,type='info') => {
             const c=document.getElementById('toast-container'), t=document.createElement('div');
-            const cls={success:'ts',warning:'tw',info:'ti'};
-            const ico={success:'fa-check-circle',warning:'fa-exclamation-triangle',info:'fa-info-circle'};
+            const cls={success:'ts',warning:'tw',info:'ti'}, ico={success:'fa-check-circle',warning:'fa-exclamation-triangle',info:'fa-info-circle'};
             t.className=`toast ${cls[type]||'ti'}`;
             t.innerHTML=`<i class="fas ${ico[type]||'fa-info-circle'}"></i><span>${msg}</span>`;
             c.appendChild(t);
-            setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300);},3000);
+            setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),300); },3000);
         }
     };
 
     document.addEventListener('DOMContentLoaded', App.init);
 </script>
 <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(()=>{});
-  }
+  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 </script>
 </body>
 </html>
